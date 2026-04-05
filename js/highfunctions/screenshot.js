@@ -817,10 +817,37 @@ async function generateScreenshot(msgs) {
             }
 
             // 气泡样式
-            let bubbleStyleCSS = '';
+            /*let bubbleStyleCSS = '';
             if (bubbleStyle === 'rounded') bubbleStyleCSS = 'border-radius: 20px;';
             else if (bubbleStyle === 'rounded-large') bubbleStyleCSS = 'border-radius: 24px;';
-            else if (bubbleStyle === 'square') bubbleStyleCSS = 'border-radius: 8px;';
+            else if (bubbleStyle === 'square') bubbleStyleCSS = 'border-radius: 8px;';*/
+            // ✨ 智能提取：直接读取网页上真实气泡的最终计算样式，100% 还原自定义效果
+            let sentBubbleComputedCSS = '';
+            let recvBubbleComputedCSS = '';
+            let sentBubbleClass = ''; // 记录真实的 class 名，用于适配自定义 CSS
+            let recvBubbleClass = '';
+
+            // 尝试获取真实页面上的气泡元素（兼容不同命名习惯）
+            const realSentEl = document.querySelector('.message.user .message-bubble') || document.querySelector('.message.sent .message-bubble');
+            const realRecvEl = document.querySelector('.message.partner .message-bubble') || document.querySelector('.message.received .message-bubble');
+
+            if (realSentEl) {
+                sentBubbleClass = realSentEl.className; // 拿到 class
+                const cs = getComputedStyle(realSentEl);
+                // 把真实的颜色、圆角、内边距、边框、阴影全拿过来
+                sentBubbleComputedCSS = `background:${cs.background}; color:${cs.color}; border-radius:${cs.borderRadius}; padding:${cs.padding}; border:${cs.border}; box-shadow:${cs.boxShadow}; font-size:${cs.fontSize}; font-weight:${cs.fontWeight};`;
+            } else {
+                // 极端情况的兜底
+                sentBubbleComputedCSS = `background:${accentColor}; color:#fff; padding:10px 15px; border-radius:18px; box-shadow: 0 3px 6px rgba(0,0,0,0.1);`;
+            }
+
+            if (realRecvEl) {
+                recvBubbleClass = realRecvEl.className;
+                const cs = getComputedStyle(realRecvEl);
+                recvBubbleComputedCSS = `background:${cs.background}; color:${cs.color}; border-radius:${cs.borderRadius}; padding:${cs.padding}; border:${cs.border}; box-shadow:${cs.boxShadow}; font-size:${cs.fontSize}; font-weight:${cs.fontWeight};`;
+            } else {
+                recvBubbleComputedCSS = `background:${secondaryBg}; color:${textPrimary}; padding:10px 15px; border-radius:18px; box-shadow: 0 3px 6px rgba(0,0,0,0.1);`;
+            }
 
             // 头像 HTML
             /*const avatarSize = 35;
@@ -847,8 +874,8 @@ async function generateScreenshot(msgs) {
             }
 
             // 拼接消息块
-            if (showAvatar) {
-                /*chatParts.push(`
+            /*if (showAvatar) {
+                chatParts.push(`
                     <div style="margin:16px 0; display:flex; align-items:center; gap:12px; flex-direction:${isUser ? 'row-reverse' : 'row'};">
                         ${avatarHTML}
                         <div style="display:inline-block; padding:10px 15px; border-radius:18px; background:${isUser ? accentColor : secondaryBg}; max-width:calc(80% - ${avatarSize + 12}px); color:${isUser ? '#fff' : textPrimary}; text-align:left; font-size:15px; word-break:break-word; ${bubbleStyleCSS} box-shadow: 0 3px 6px rgba(0,0,0,0.1);">
@@ -857,7 +884,7 @@ async function generateScreenshot(msgs) {
                             ${timeStrHTML}
                         </div>
                     </div>
-                `);*/
+                `);
                 chatParts.push(`
                 <div style="margin:16px 0; display:flex; align-items:flex-start; gap:12px; flex-direction:${isUser ? 'row-reverse' : 'row'};">
                     ${avatarHTML}
@@ -880,12 +907,44 @@ async function generateScreenshot(msgs) {
                             ${timeStrHTML}
                         </div>
                     </div>
-                `);*/
-                chatParts.push(`
-                    <div style="margin:16px 0; display:flex; flex-direction:column; align-items:${isUser ? 'flex-end' : 'flex-start'};">
+                `);
                         <div style="display:inline-block; padding:10px 15px; border-radius:18px; background:${isUser ? accentColor : secondaryBg}; max-width:80%; color:${isUser ? '#fff' : textPrimary}; text-align:left; font-size:15px; word-break:break-word; ${bubbleStyleCSS} box-shadow: 0 3px 6px rgba(0,0,0,0.1);">
                         ${replyContent}
                         ${safeText}
+                        </div>
+                        
+                    </div>
+                chatParts.push(`
+                    <div style="margin:16px 0; display:flex; flex-direction:column; align-items:${isUser ? 'flex-end' : 'flex-start'};">
+                        <div class="${isUser ? sentBubbleClass : recvBubbleClass}" style="display:inline-block; max-width:80%; text-align:left; word-break:break-word; ${isUser ? sentBubbleComputedCSS : recvBubbleComputedCSS}">
+                            ${replyContent}
+                            ${safeText}
+                        </div>
+                        ${timeStrHTML}
+                    </div>
+                `);
+            }*/
+                       // 拼接消息块
+            if (showAvatar) {
+                chatParts.push(`
+                <div style="margin:16px 0; display:flex; align-items:flex-start; gap:12px; flex-direction:${isUser ? 'row-reverse' : 'row'};">
+                    ${avatarHTML}
+                    <div style="display:flex; flex-direction:column; max-width:calc(80% - ${avatarSize + 12}px); align-items:${isUser ? 'flex-end' : 'flex-start'};">
+                    <div class="${isUser ? sentBubbleClass : recvBubbleClass}" style="display:inline-block; text-align:left; word-break:break-word; ${isUser ? sentBubbleComputedCSS : recvBubbleComputedCSS}">
+                        ${replyContent}
+                        ${safeText}
+                    </div>
+                    ${timeStrHTML}
+                    </div>
+                </div>
+            `);
+
+            } else {
+                chatParts.push(`
+                    <div style="margin:16px 0; display:flex; flex-direction:column; align-items:${isUser ? 'flex-end' : 'flex-start'};">
+                        <div class="${isUser ? sentBubbleClass : recvBubbleClass}" style="display:inline-block; max-width:80%; text-align:left; word-break:break-word; ${isUser ? sentBubbleComputedCSS : recvBubbleComputedCSS}">
+                            ${replyContent}
+                            ${safeText}
                         </div>
                         ${timeStrHTML}
                     </div>
@@ -918,12 +977,19 @@ async function generateScreenshot(msgs) {
             overflow: hidden;
         `;
         tempContainer.innerHTML = chatParts.join('');
+        // ✨ 注入用户的自定义气泡 CSS（让高级自定义代码也能在截图里生效）
+        const customBubbleStyle = document.getElementById('user-custom-bubble-style');
+        if (customBubbleStyle && customBubbleStyle.textContent) {
+            const injectStyle = document.createElement('style');
+            injectStyle.textContent = customBubbleStyle.textContent;
+            tempContainer.insertBefore(injectStyle, tempContainer.firstChild);
+        }
         document.body.appendChild(tempContainer);
 
         // 生成截图
         const canvas = await html2canvas(tempContainer, {
             backgroundColor: null,
-            scale: 4,
+            scale: 5,
             useCORS: false,
             logging: false,
             windowWidth: phoneWidth,

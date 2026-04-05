@@ -677,7 +677,7 @@ function generateTxtFile(msgs) {
 }
 
  
-async function generateScreenshot(msgs) {
+/*async function generateScreenshot(msgs) {
     showNotification('正在生成截图...', 'info');
 
     // 1. 强制等待字体加载完成
@@ -728,7 +728,7 @@ async function generateScreenshot(msgs) {
         let partnerAvatarUrl = '';
         if (showAvatar) {
             /*const myAvatarImg = document.querySelector('.user-info:first-child .avatar img');
-            const partnerAvatarImg = document.querySelector('.user-info:last-child .avatar img');*/
+            const partnerAvatarImg = document.querySelector('.user-info:last-child .avatar img');
             // 修正：右侧是用户，左侧是系统
             const myAvatarImg = document.querySelector('.user-info:last-child .avatar img');
             const partnerAvatarImg = document.querySelector('.user-info:first-child .avatar img');
@@ -759,7 +759,7 @@ async function generateScreenshot(msgs) {
             /*let bubbleStyleCSS = '';
             if (bubbleStyle === 'rounded') bubbleStyleCSS = 'border-radius: 20px;';
             else if (bubbleStyle === 'rounded-large') bubbleStyleCSS = 'border-radius: 24px;';
-            else if (bubbleStyle === 'square') bubbleStyleCSS = 'border-radius: 8px;';*/
+            else if (bubbleStyle === 'square') bubbleStyleCSS = 'border-radius: 8px;';
             // ✨ 智能提取：直接读取网页上真实气泡的最终计算样式，100% 还原自定义效果
             let sentBubbleComputedCSS = '';
             let recvBubbleComputedCSS = '';
@@ -809,7 +809,7 @@ async function generateScreenshot(msgs) {
                 const tsColor = isUser ? 'rgba(255,255,255,0.7)' : textSecondary;
                 const tsAlign = isUser ? 'right' : 'left';
                 timeStrHTML = `<div style="font-size:11px;color:${tsColor};margin-top:5px;text-align:${tsAlign};font-weight:500;opacity:0.7;">${timeStr}</div>`;
-            }*/
+            }
            // 生成时间戳（连续同发送者只在最后一条显示）
             const fmt = settings.timeFormat || 'HH:mm';
             let timeStrHTML = '';
@@ -855,7 +855,7 @@ async function generateScreenshot(msgs) {
             const avatarHTML = showAvatar && avatarUrl ? 
                 `<img src="${avatarUrl}" style="width:${avatarSize}px; height:${avatarSize}px; border-radius:${avatarRadius}; object-fit:cover; flex-shrink:0; border: 2px solid rgba(255,255,255,0.3);">` : 
                 (showAvatar ? `<div style="width:${avatarSize}px; height:${avatarSize}px; border-radius:${avatarRadius}; background:${isUser ? accentColor : '#e0e0e0'}; display:flex; align-items:center; justify-content:center; color:${isUser ? '#fff' : '#999'}; font-size:14px; flex-shrink:0; border: 2px solid rgba(255,255,255,0.3);">${isUser ? '我' : 'T'}</div>` : '');
-*/
+
             // 头像 HTML（✨ 修复跨域卡死：过滤外部图床链接）
             const avatarSize = 35;
             const avatarUrl = isUser ? myAvatarUrl : partnerAvatarUrl;
@@ -923,7 +923,7 @@ async function generateScreenshot(msgs) {
                         ${timeStrHTML}
                     </div>
                 `);
-            }*/
+            }
                        // 拼接消息块
             if (showAvatar) {
                 chatParts.push(`
@@ -983,7 +983,7 @@ async function generateScreenshot(msgs) {
             const injectStyle = document.createElement('style');
             injectStyle.textContent = customBubbleStyle.textContent;
             tempContainer.insertBefore(injectStyle, tempContainer.firstChild);
-        }*/
+        }
         document.body.appendChild(tempContainer);
 
         // 生成截图
@@ -1014,7 +1014,7 @@ async function generateScreenshot(msgs) {
                     newLink.href = link.href;
                     clonedDoc.head.appendChild(newLink);
                 });
-            }*/
+            }
                        onclone: (clonedDoc) => {
                 const clonedContainer = clonedDoc.body.querySelector('div[style*="width: 375px"]');
                 
@@ -1044,6 +1044,172 @@ async function generateScreenshot(msgs) {
                 });
             }
 
+        });
+
+        const url = canvas.toDataURL('image/png');
+        if (tempContainer && tempContainer.parentNode) {
+            document.body.removeChild(tempContainer);
+        }
+        showScreenshotPreview(url, sortedMsgs.length, canvas.width, canvas.height);
+
+    } catch (error) {
+        console.error('截图生成失败:', error);
+        showNotification('截图失败: ' + error.message, 'error');
+        if (tempContainer && tempContainer.parentNode) {
+            document.body.removeChild(tempContainer);
+        }
+    }
+}*/
+async function generateScreenshot(msgs) {
+    showNotification('正在生成截图...', 'info');
+
+    // 1. 强制等待字体加载完成
+    if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    let tempContainer = null;
+    try {
+        const root = document.documentElement;
+        const computedStyle = getComputedStyle(root);
+
+        // 只需要拿最基础的背景和字体变量
+        const fontFamily = computedStyle.getPropertyValue('--message-font-family').trim() || "'Noto Serif SC', serif";
+        const primaryBg = computedStyle.getPropertyValue('--primary-bg').trim() || '#ffffff';
+        const messageLineHeight = computedStyle.getPropertyValue('--message-line-height').trim() || '1.5';
+        const showAvatar = localStorage.getItem('screenshot-show-avatar') === 'true';
+
+        // 背景设置（安全判断，过滤外部图床防止白屏）
+        let bgStyle = `background-color: ${primaryBg};`;
+        const bgImageVar = computedStyle.getPropertyValue('--chat-bg-image').trim();
+        if (bgImageVar && bgImageVar !== 'none' && (bgImageVar.startsWith('data:') || bgImageVar.startsWith('url("data:'))) {
+            bgStyle = `background-image: ${bgImageVar}; background-size: 100% auto; background-position: top center; background-repeat: repeat-y;`;
+        } else if (settings.backgroundUrl) {
+            if (settings.backgroundUrl.startsWith('data:') || settings.backgroundUrl.startsWith(window.location.origin)) {
+                bgStyle = `background-image: url('${settings.backgroundUrl}'); background-size: 100% auto; background-position: top center; background-repeat: repeat-y;`;
+            }
+        }
+
+        // 消息按时间正序排列
+        const sortedMsgs = [...msgs].sort((a, b) => a.timestamp - b.timestamp);
+        
+        // 生成头尾日期信息
+        const firstDate = new Date(sortedMsgs[0].timestamp).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', year: 'numeric' });
+        const lastDate = new Date(sortedMsgs[sortedMsgs.length - 1].timestamp).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', year: 'numeric' });
+        let dateTitle = firstDate === lastDate ? firstDate : `${firstDate} - ${lastDate}`;
+
+        // ==========================================
+        // ✨ 终极方案：直接克隆真实的 DOM 节点，放弃手写 HTML
+        // ==========================================
+        const clonedFragments = document.createDocumentFragment();
+        
+        sortedMsgs.forEach(msg => {
+            // 找到真实网页上对应的这条消息
+            const realNode = document.querySelector(`.message-wrapper[data-id="${msg.id}"]`);
+            if (realNode) {
+                const clone = realNode.cloneNode(true);
+                
+                // 1. 去掉可能残留的选中高亮状态
+                clone.classList.remove('selected');
+                
+                // 2. 处理头像：如果没勾选显示头像，直接把真实DOM里的头像删掉
+                if (!showAvatar) {
+                    const avatars = clone.querySelectorAll('.avatar');
+                    avatars.forEach(av => av.remove());
+                }
+                
+                // 3. 提前把外部图床图片替换成占位符（防止 html2canvas 卡死白屏）
+                clone.querySelectorAll('img').forEach(img => {
+                    if (img.src && !img.src.startsWith('data:') && !img.src.startsWith(window.location.origin)) {
+                        const placeholder = document.createElement('div');
+                        placeholder.style.cssText = `width:100px; height:100px; background:#eee; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px; border-radius:4px;`;
+                        placeholder.textContent = '[图片]';
+                        img.replaceWith(placeholder);
+                    }
+                });
+                
+                clonedFragments.appendChild(clone);
+            }
+        });
+
+        // 创建一个离屏容器
+        tempContainer = document.createElement('div');
+        const phoneWidth = 375;
+        tempContainer.style.cssText = `
+            position:fixed; left:-9999px; top:0; width:${phoneWidth}px; 
+            ${bgStyle} 
+            font-family: ${fontFamily}; 
+            line-height: ${messageLineHeight}; 
+            padding: 30px 20px; 
+            overflow: hidden; 
+        `;
+
+        // 加上截图的头部标题
+        const header = document.createElement('div');
+        header.style.cssText = 'text-align:center; margin-bottom:20px; padding:10px 0; font-size:18px; font-weight:600; color: #333; border-bottom: 1px solid #ddd; letter-spacing: 1px; font-family: sans-serif;';
+        header.textContent = `聊天记录 · 共 ${sortedMsgs.length} 条消息`;
+        tempContainer.appendChild(header);
+
+        // 把真实克隆的消息塞进去
+        tempContainer.appendChild(clonedFragments);
+
+        // 加上截图的尾部日期
+        const footer = document.createElement('div');
+        footer.style.cssText = 'text-align:center; margin-top:20px; padding:10px; font-size:12px; color: #888; border-top: 1px solid #eee; font-family: sans-serif;';
+        footer.textContent = dateTitle;
+        tempContainer.appendChild(footer);
+
+        document.body.appendChild(tempContainer);
+
+        // 生成截图
+        const canvas = await html2canvas(tempContainer, {
+            backgroundColor: null,
+            scale: 2, 
+            useCORS: false,
+            logging: false,
+            windowWidth: phoneWidth,
+            allowTaint: true,
+            ignoreElements: (element) => {
+                if (element.tagName === 'IMG' && element.src && !element.src.startsWith('data:') && !element.src.startsWith(window.location.origin)) {
+                    return true; // 无视漏网的外部图片
+                }
+                return false;
+            },
+            onclone: (clonedDoc) => {
+                const clonedContainer = clonedDoc.body.querySelector('div[style*="width: 375px"]');
+                
+                // 1. 把主页面所有的外部 <link> CSS 搬过来
+                document.head.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+                    const newLink = clonedDoc.createElement('link');
+                    newLink.rel = 'stylesheet';
+                    newLink.href = link.href;
+                    clonedDoc.head.appendChild(newLink);
+                });
+
+                // 2. 把主页面所有的内部 <style>（你的自定义气泡CSS、全局CSS等）全部原封不动搬过来！
+                document.head.querySelectorAll('style').forEach(style => {
+                    const newStyle = clonedDoc.createElement('style');
+                    newStyle.textContent = style.textContent;
+                    clonedDoc.head.appendChild(newStyle);
+                });
+
+                if (clonedContainer) {
+                    // 3. 强制覆盖字体
+                    const fontStyle = clonedDoc.createElement('style');
+                    fontStyle.textContent = ` * { font-family: ${fontFamily} !important; } `;
+                    clonedContainer.insertBefore(fontStyle, clonedContainer.firstChild);
+
+                    // 4. 隐藏不需要截进去的交互元素（比如删除按钮、悬浮特效等）
+                    const hideStyle = clonedDoc.createElement('style');
+                    hideStyle.textContent = `
+                        .meta-action-btn, .favorite-action-btn, .message-meta-actions, 
+                        .read-receipt-icon, .typing-indicator { display: none !important; }
+                        .message-wrapper.selected { outline: none !important; background: transparent !important; }
+                    `;
+                    clonedContainer.insertBefore(hideStyle, clonedContainer.firstChild);
+                }
+            }
         });
 
         const url = canvas.toDataURL('image/png');

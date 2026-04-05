@@ -755,6 +755,38 @@ async function generateScreenshot(msgs) {
                 <div style="background: transparent; padding: 0;">
         `);
 
+            // 气泡样式
+            /*let bubbleStyleCSS = '';
+            if (bubbleStyle === 'rounded') bubbleStyleCSS = 'border-radius: 20px;';
+            else if (bubbleStyle === 'rounded-large') bubbleStyleCSS = 'border-radius: 24px;';
+            else if (bubbleStyle === 'square') bubbleStyleCSS = 'border-radius: 8px;';*/
+            // ✨ 智能提取：直接读取网页上真实气泡的最终计算样式，100% 还原自定义效果
+            let sentBubbleComputedCSS = '';
+            let recvBubbleComputedCSS = '';
+            let sentBubbleClass = ''; // 记录真实的 class 名，用于适配自定义 CSS
+            let recvBubbleClass = '';
+
+            // 尝试获取真实页面上的气泡元素（兼容不同命名习惯）
+            const realSentEl = document.querySelector('.message.user .message-bubble') || document.querySelector('.message.sent .message-bubble');
+            const realRecvEl = document.querySelector('.message.partner .message-bubble') || document.querySelector('.message.received .message-bubble');
+
+            if (realSentEl) {
+                sentBubbleClass = realSentEl.className; // 拿到 class
+                const cs = getComputedStyle(realSentEl);
+                // 把真实的颜色、圆角、内边距、边框、阴影全拿过来
+                sentBubbleComputedCSS = `background:${cs.background}; color:${cs.color}; border-radius:${cs.borderRadius}; padding:${cs.padding}; border:${cs.border}; box-shadow:${cs.boxShadow}; font-size:${cs.fontSize}; font-weight:${cs.fontWeight};`;
+            } else {
+                // 极端情况的兜底
+                sentBubbleComputedCSS = `background:${accentColor}; color:#fff; padding:10px 15px; border-radius:18px; box-shadow: 0 3px 6px rgba(0,0,0,0.1);`;
+            }
+
+            if (realRecvEl) {
+                recvBubbleClass = realRecvEl.className;
+                const cs = getComputedStyle(realRecvEl);
+                recvBubbleComputedCSS = `background:${cs.background}; color:${cs.color}; border-radius:${cs.borderRadius}; padding:${cs.padding}; border:${cs.border}; box-shadow:${cs.boxShadow}; font-size:${cs.fontSize}; font-weight:${cs.fontWeight};`;
+            } else {
+                recvBubbleComputedCSS = `background:${secondaryBg}; color:${textPrimary}; padding:10px 15px; border-radius:18px; box-shadow: 0 3px 6px rgba(0,0,0,0.1);`;
+            }
         // 循环消息
         sortedMsgs.forEach((msg, index) => {
             const isUser = msg.sender === 'user';
@@ -816,38 +848,6 @@ async function generateScreenshot(msgs) {
                 }
             }
 
-            // 气泡样式
-            /*let bubbleStyleCSS = '';
-            if (bubbleStyle === 'rounded') bubbleStyleCSS = 'border-radius: 20px;';
-            else if (bubbleStyle === 'rounded-large') bubbleStyleCSS = 'border-radius: 24px;';
-            else if (bubbleStyle === 'square') bubbleStyleCSS = 'border-radius: 8px;';*/
-            // ✨ 智能提取：直接读取网页上真实气泡的最终计算样式，100% 还原自定义效果
-            let sentBubbleComputedCSS = '';
-            let recvBubbleComputedCSS = '';
-            let sentBubbleClass = ''; // 记录真实的 class 名，用于适配自定义 CSS
-            let recvBubbleClass = '';
-
-            // 尝试获取真实页面上的气泡元素（兼容不同命名习惯）
-            const realSentEl = document.querySelector('.message.user .message-bubble') || document.querySelector('.message.sent .message-bubble');
-            const realRecvEl = document.querySelector('.message.partner .message-bubble') || document.querySelector('.message.received .message-bubble');
-
-            if (realSentEl) {
-                sentBubbleClass = realSentEl.className; // 拿到 class
-                const cs = getComputedStyle(realSentEl);
-                // 把真实的颜色、圆角、内边距、边框、阴影全拿过来
-                sentBubbleComputedCSS = `background:${cs.background}; color:${cs.color}; border-radius:${cs.borderRadius}; padding:${cs.padding}; border:${cs.border}; box-shadow:${cs.boxShadow}; font-size:${cs.fontSize}; font-weight:${cs.fontWeight};`;
-            } else {
-                // 极端情况的兜底
-                sentBubbleComputedCSS = `background:${accentColor}; color:#fff; padding:10px 15px; border-radius:18px; box-shadow: 0 3px 6px rgba(0,0,0,0.1);`;
-            }
-
-            if (realRecvEl) {
-                recvBubbleClass = realRecvEl.className;
-                const cs = getComputedStyle(realRecvEl);
-                recvBubbleComputedCSS = `background:${cs.background}; color:${cs.color}; border-radius:${cs.borderRadius}; padding:${cs.padding}; border:${cs.border}; box-shadow:${cs.boxShadow}; font-size:${cs.fontSize}; font-weight:${cs.fontWeight};`;
-            } else {
-                recvBubbleComputedCSS = `background:${secondaryBg}; color:${textPrimary}; padding:10px 15px; border-radius:18px; box-shadow: 0 3px 6px rgba(0,0,0,0.1);`;
-            }
 
             // 头像 HTML
             /*const avatarSize = 35;
@@ -978,12 +978,12 @@ async function generateScreenshot(msgs) {
         `;
         tempContainer.innerHTML = chatParts.join('');
         // ✨ 注入用户的自定义气泡 CSS（让高级自定义代码也能在截图里生效）
-        const customBubbleStyle = document.getElementById('user-custom-bubble-style');
+        /*const customBubbleStyle = document.getElementById('user-custom-bubble-style');
         if (customBubbleStyle && customBubbleStyle.textContent) {
             const injectStyle = document.createElement('style');
             injectStyle.textContent = customBubbleStyle.textContent;
             tempContainer.insertBefore(injectStyle, tempContainer.firstChild);
-        }
+        }*/
         document.body.appendChild(tempContainer);
 
         // 生成截图
@@ -1001,7 +1001,7 @@ async function generateScreenshot(msgs) {
                 }
                 return false;
             },
-            onclone: (clonedDoc) => {
+            /*onclone: (clonedDoc) => {
                 const clonedContainer = clonedDoc.body.querySelector('div[style*="width: 375px"]');
                 const style = clonedDoc.createElement('style');
                 style.textContent = ` * { font-family: ${fontFamily} !important; } `;
@@ -1014,7 +1014,36 @@ async function generateScreenshot(msgs) {
                     newLink.href = link.href;
                     clonedDoc.head.appendChild(newLink);
                 });
+            }*/
+                       onclone: (clonedDoc) => {
+                const clonedContainer = clonedDoc.body.querySelector('div[style*="width: 375px"]');
+                
+                // 1. 注入基础字体
+                const fontStyle = clonedDoc.createElement('style');
+                fontStyle.textContent = ` * { font-family: ${fontFamily} !important; } `;
+                if (clonedContainer) clonedContainer.insertBefore(fontStyle, clonedContainer.firstChild);
+
+                // 2. ✨ 核心修复：把用户的自定义气泡 CSS 注入到克隆文档中！
+                const userBubbleCSS = document.getElementById('user-custom-bubble-style');
+                if (userBubbleCSS && userBubbleCSS.textContent) {
+                    const bubbleStyle = clonedDoc.createElement('style');
+                    bubbleStyle.textContent = userBubbleCSS.textContent;
+                    if (clonedContainer) {
+                        clonedContainer.insertBefore(bubbleStyle, clonedContainer.firstChild);
+                    } else {
+                        clonedDoc.head.appendChild(bubbleStyle);
+                    }
+                }
+
+                // 3. 复制主文档的外部样式表
+                document.head.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+                    const newLink = clonedDoc.createElement('link');
+                    newLink.rel = 'stylesheet';
+                    newLink.href = link.href;
+                    clonedDoc.head.appendChild(newLink);
+                });
             }
+
         });
 
         const url = canvas.toDataURL('image/png');

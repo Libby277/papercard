@@ -956,11 +956,8 @@ function manageAutoSendTimer() {
                     if (typeof showNotification === 'function') showNotification('未能定位到该消息', 'info');
                     }
                 }, 50);
-                } else {
-                if (typeof showNotification === 'function') showNotification('消息可能已被删除', 'info');
-                }
             };
-  
+        }
         function renderMessages(preserveScroll = false) {
             const container = DOMElements.chatContainer;
             const totalMessages = messages.length;
@@ -1373,75 +1370,6 @@ function manageAutoSendTimer() {
                     const delayRange = settings.replyDelayMax - settings.replyDelayMin;
                     const randomDelay = settings.replyDelayMin + Math.random() * delayRange;
 
-                    // Show typing indicator immediately (no delay)
-                   /* if (settings.typingIndicatorEnabled) {
-                        const tiWrapper = document.getElementById('typing-indicator-wrapper');
-                        const tiLabel = document.getElementById('typing-indicator-label');
-                        const tiAvatar = document.getElementById('typing-indicator-avatar');
-                        if (tiLabel) tiLabel.textContent = (settings.partnerName || '对方') + ' 正在输入';
-                        if (tiWrapper) { positionTypingIndicator(); tiWrapper.style.display = 'block'; }
-                        if (tiAvatar) {
-                            const partnerImg = DOMElements.partner.avatar.querySelector('img');
-                            tiAvatar.innerHTML = partnerImg ? `<img src="${partnerImg.src}">` : '<i class="fas fa-user"></i>';
-                        }
-                        if (DOMElements.chatContainer) DOMElements.chatContainer.scrollTop = DOMElements.chatContainer.scrollHeight;
-                    }
-
-                    // Mark messages as read
-                    setTimeout(() => {
-                        let changed = false;
-                        messages.forEach(msg => {
-                            if (msg.sender === 'user' && msg.status !== 'read') {
-                                msg.status = 'read';
-                                changed = true;
-                            }
-                        });
-                        if (changed) { renderMessages(false); throttledSaveData(); }
-                    }, 400);
-
-                    // Cancel any pending reply timer and reset it (so rapid messages don't stack replies)
-                    const shouldIgnore = settings.allowReadNoReply && (Math.random() <(settings.readNoReplyChance || 0.2));
-                    if (!shouldIgnore) {
-                        window._pendingReplyTimer = setTimeout(() => {
-                            window._pendingReplyTimer = null;
-                            simulateReply();
-                        }, randomDelay);
-                    } else {
-                        window._pendingReplyTimer = setTimeout(() => {
-                            window._pendingReplyTimer = null;
-                            const _tiW = document.getElementById('typing-indicator-wrapper');
-                            if (_tiW) { const _tiInner = _tiW.querySelector('.typing-indicator'); if (_tiInner) { _tiInner.classList.add('hiding'); setTimeout(() => { _tiW.style.display = 'none'; if (_tiInner) _tiInner.classList.remove('hiding'); }, 240); } else { _tiW.style.display = 'none'; } }
-                        }, randomDelay * 0.4);
-                    }
-                         // Cancel any pending reply timer and reset it (so rapid messages don't stack replies)
-                    // 判断是否触发“不回复”概率
-                    const shouldIgnore = settings.allowReadNoReply && (Math.random() < (settings.readNoReplyChance || 0.2));
-                    
-                    if (!shouldIgnore) {
-                        
-                        // 【准备回复】：先显示“正在输入中”，等时间到了去调 simulateReply
-                        if (settings.typingIndicatorEnabled) {
-                        const tiWrapper = document.getElementById('typing-indicator-wrapper');
-                        const tiLabel = document.getElementById('typing-indicator-label');
-                        const tiAvatar = document.getElementById('typing-indicator-avatar');
-                        if (tiLabel) tiLabel.textContent = (settings.partnerName || '对方') + ' 正在输入';
-                        if (tiWrapper) {
-                            positionTypingIndicator();
-                            tiWrapper.style.display = 'block';
-                        }
-                        if (tiAvatar) {
-                            const partnerImg = DOMElements.partner.avatar.querySelector('img');
-                            tiAvatar.innerHTML = partnerImg ? `<img src="${partnerImg.src}">` : '<i class="fas fa-user"></i>';
-                        }
-                        if (DOMElements.chatContainer) DOMElements.chatContainer.scrollTop = DOMElements.chatContainer.scrollHeight;
-                        }
-                        
-                        window._pendingReplyTimer = setTimeout(() => {
-                        window._pendingReplyTimer = null;
-                        simulateReply(); // 👈 神奇魔法在这里：它一启动，就会自动把前面所有未读的一起改成已读！
-                        }, randomDelay);
-                    }
-                    // 如果 shouldIgnore 为 true，这里什么都不写！它就会乖乖保持“未读”，直到主动发消息或下次回复。*/
                           // 1. 【防抖核心】先清除之前的倒计时，并记住之前有没有在倒计时
                     const hadPendingTimer = !!window._pendingReplyTimer;
                     if (hadPendingTimer) {
@@ -1630,16 +1558,12 @@ function manageAutoSendTimer() {
                 return;
             }
             let delay = 0;
-            //引用回复
-            /* const recentUserMsgs = settings.replyEnabled
-                ? messages.filter(m => m.sender === 'user' && m.text).slice(-10)
-                : [];*/
             // ===== 引用逻辑优化：时间窗口限制 =====
             const REPLY_TIME_LIMIT = 1 * 60 * 60 * 1000; // 设定时间限制为 1小时 (单位：毫秒)
             const recentUserMsgs = settings.replyEnabled ? messages.filter(m => {
                 // 1. 必须是用户发的消息，且必须有文字内容
-                if (m.sender !== 'user' || !m.text) return false;
-                
+                //if (m.sender !== 'user' || !m.text) return false;
+                if ((m.sender !== 'user' && m.sender !== 'partner') || !m.text) return false;
                 // 2. 计算消息时间差
                 const msgTime = new Date(m.timestamp).getTime();
                 const isRecent = (Date.now() - msgTime) < REPLY_TIME_LIMIT;

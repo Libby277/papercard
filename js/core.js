@@ -1315,7 +1315,7 @@ function manageAutoSendTimer() {
                     const randomDelay = settings.replyDelayMin + Math.random() * delayRange;
 
                     // Show typing indicator immediately (no delay)
-                    if (settings.typingIndicatorEnabled) {
+                   /* if (settings.typingIndicatorEnabled) {
                         const tiWrapper = document.getElementById('typing-indicator-wrapper');
                         const tiLabel = document.getElementById('typing-indicator-label');
                         const tiAvatar = document.getElementById('typing-indicator-avatar');
@@ -1353,7 +1353,62 @@ function manageAutoSendTimer() {
                             const _tiW = document.getElementById('typing-indicator-wrapper');
                             if (_tiW) { const _tiInner = _tiW.querySelector('.typing-indicator'); if (_tiInner) { _tiInner.classList.add('hiding'); setTimeout(() => { _tiW.style.display = 'none'; if (_tiInner) _tiInner.classList.remove('hiding'); }, 240); } else { _tiW.style.display = 'none'; } }
                         }, randomDelay * 0.4);
+                    }*/
+                         // Cancel any pending reply timer and reset it (so rapid messages don't stack replies)
+                    const shouldIgnore = settings.allowReadNoReply && (Math.random() <(settings.readNoReplyChance || 0.2));
+
+                    if (shouldIgnore) {
+                        // 【已读不回】：绝不显示"正在输入中"！只等一会再悄悄改已读状态
+                        setTimeout(() => {
+                        let changed = false;
+                        messages.forEach(msg => {
+                            if (msg.sender === 'user' && msg.status !== 'read') {
+                            msg.status = 'read';
+                            changed = true;
+                            }
+                        });
+                            if (changed) {
+                                renderMessages(false);
+                                throttledSaveData();
+                            }
+                        }, 2000); // 等2秒再显示已读，模拟看了一眼就划走的感觉
+                    } else {
+                        // 【正常回复】：先显示"正在输入中"，等对方回复
+                        if (settings.typingIndicatorEnabled) {
+                        const tiWrapper = document.getElementById('typing-indicator-wrapper');
+                        const tiLabel = document.getElementById('typing-indicator-label');
+                        const tiAvatar = document.getElementById('typing-indicator-avatar');
+                        if (tiLabel) tiLabel.textContent = (settings.partnerName || '对方') + ' 正在输入';
+                        if (tiWrapper) {
+                            positionTypingIndicator();
+                            tiWrapper.style.display = 'block';
+                        }
+                        if (tiAvatar) {
+                            const partnerImg = DOMElements.partner.avatar.querySelector('img');
+                            tiAvatar.innerHTML = partnerImg ? `<img src="${partnerImg.src}">` : '<i class="fas fa-user"></i>';
+                        }
+                        if (DOMElements.chatContainer) DOMElements.chatContainer.scrollTop = DOMElements.chatContainer.scrollHeight;
+                        }
+                        // Mark messages as read
+                        setTimeout(() => {
+                        let changed = false;
+                        messages.forEach(msg => {
+                            if (msg.sender === 'user' && msg.status !== 'read') {
+                            msg.status = 'read';
+                            changed = true;
+                            }
+                        });
+                        if (changed) {
+                            renderMessages(false);
+                            throttledSaveData();
+                        }
+                        }, 400);
+                        window._pendingReplyTimer = setTimeout(() => {
+                        window._pendingReplyTimer = null;
+                        simulateReply();
+                        }, randomDelay);
                     }
+
                 }
             };
 
@@ -2180,8 +2235,8 @@ async function handleLegacyImport(importedData) {
                             reloadNeeded = true;
                         } else if (reg.id === 'settings') {
                             // 设置追加：其实就是合并属性（新属性覆盖旧属性，旧属性保留）
-                            Object.assign(settings, importedData[reg.id]);
-                            reloadNeeded = true;
+                            //Object.assign(settings, importedData[reg.id]);
+                            //reloadNeeded = true;
                         } else {
                             // 其他数据追加（如字卡、表情、纪念日等数组或对象）
                             const curVal = _getRegVal(reg.id);

@@ -501,7 +501,8 @@ document.getElementById('chat-settings').addEventListener('click', () => {
         '#read-receipts-toggle': { prop: 'readReceiptsEnabled', name: '已读回执' },
         '#typing-indicator-toggle': { prop: 'typingIndicatorEnabled', name: '正在输入' },
         '#read-no-reply-toggle': { prop: 'allowReadNoReply', name: '已读不回' },
-        '#emoji-mix-toggle': { prop: 'emojiMixEnabled', name: '表情消息' }
+        '#emoji-mix-toggle': { prop: 'emojiMixEnabled', name: '表情消息' },
+        '#enter-send-toggle': { prop: 'enterToSendEnabled', name: '回车发送消息' }
     };
     for (const [selector, { prop }] of Object.entries(toggleSyncMap)) {
         const el = document.querySelector(selector);
@@ -1116,7 +1117,8 @@ document.getElementById('chat-settings').addEventListener('click', () => {
                 '#typing-indicator-toggle': {
                     prop: 'typingIndicatorEnabled', name: '正在输入'},
                     '#read-no-reply-toggle': { prop: 'allowReadNoReply', name: '已读不回' },
-                    '#emoji-mix-toggle': { prop: 'emojiMixEnabled', name: '表情混入消息' }
+                    '#emoji-mix-toggle': { prop: 'emojiMixEnabled', name: '表情混入消息' },
+                    '#enter-send-toggle': { prop: 'enterToSendEnabled', name: '回车发送消息' }
 };
 
             for (const [selector, {
@@ -1521,100 +1523,109 @@ document.getElementById('chat-settings').addEventListener('click', () => {
         DOMElements.messageInput.addEventListener('input', () => {
             DOMElements.messageInput.style.height = 'auto'; DOMElements.messageInput.style.height = `${Math.min(DOMElements.messageInput.scrollHeight, 120)}px`;
         });
+        // 回车发送消息功能（Shift+Enter依然是换行）
+        DOMElements.messageInput.addEventListener('keydown', (e) => {
+            if (settings.enterToSendEnabled && e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // 阻止默认的换行
+                const text = DOMElements.messageInput.value.trim();
+                const imageFile = DOMElements.imageInput.files[0];
+                if (text || imageFile) {
+                    sendMessage();
+                }
+            }
+        });
+
         DOMElements.continueBtn.addEventListener('click', simulateReply);
 
-
-
-function _applyCollapseState(on) {
-    document.body.classList.toggle('bottom-collapse-mode', on);
-    // Sync cs-panel-display toggle pill
-    const csToggle = document.getElementById('bottom-collapse-cs-toggle');
-    if (csToggle) csToggle.classList.toggle('active', on);
-    if (!on) {
-        const panel = document.getElementById('collapsed-extras-panel');
-        if (panel) panel.style.display = 'none';
-        const expandBtn = document.getElementById('collapse-expand-btn');
-        if (expandBtn) expandBtn.classList.remove('open');
-    }
-}
-
-window._toggleBottomCollapse = function() {
-    const isOn = !document.body.classList.contains('bottom-collapse-mode');
-    if (typeof settings !== 'undefined') settings.bottomCollapseMode = isOn;
-    _applyCollapseState(isOn);
-    if (typeof throttledSaveData === 'function') throttledSaveData();
-    if (typeof showNotification === 'function')
-        showNotification(isOn ? '底部栏已收纳 — 点击 ⌃ 展开更多' : '已退出收纳模式', 'success', 2000);
-};
-
-window.toggleCollapsedExtras = function() {
-    const panel = document.getElementById('collapsed-extras-panel');
-    const btn = document.getElementById('collapse-expand-btn');
-    if (!panel) return;
-    const willOpen = panel.style.display === 'none' || panel.style.display === '';
-    panel.style.display = willOpen ? 'block' : 'none';
-    if (btn) btn.classList.toggle('open', willOpen);
-
-    function wireExtra(extraId, primaryId) {
-        const extra = document.getElementById(extraId);
-        const primary = document.getElementById(primaryId);
-        if (extra && primary && !extra._linked) {
-            extra._linked = true;
-            extra.addEventListener('click', (e) => { e.stopPropagation(); primary.click(); });
+        function _applyCollapseState(on) {
+            document.body.classList.toggle('bottom-collapse-mode', on);
+            // Sync cs-panel-display toggle pill
+            const csToggle = document.getElementById('bottom-collapse-cs-toggle');
+            if (csToggle) csToggle.classList.toggle('active', on);
+            if (!on) {
+                const panel = document.getElementById('collapsed-extras-panel');
+                if (panel) panel.style.display = 'none';
+                const expandBtn = document.getElementById('collapse-expand-btn');
+                if (expandBtn) expandBtn.classList.remove('open');
+            }
         }
-    }
-    wireExtra('combo-btn-extra', 'combo-btn');
-    wireExtra('batch-btn-extra', 'batch-btn');
-};
 
-window.exitCollapseMode = function() {
-    if (typeof settings !== 'undefined') settings.bottomCollapseMode = false;
-    _applyCollapseState(false);
-    if (typeof throttledSaveData === 'function') throttledSaveData();
-    if (typeof showNotification === 'function') showNotification('已退出收纳模式', 'success', 2000);
-};
+        window._toggleBottomCollapse = function() {
+            const isOn = !document.body.classList.contains('bottom-collapse-mode');
+            if (typeof settings !== 'undefined') settings.bottomCollapseMode = isOn;
+            _applyCollapseState(isOn);
+            if (typeof throttledSaveData === 'function') throttledSaveData();
+            if (typeof showNotification === 'function')
+                showNotification(isOn ? '底部栏已收纳 — 点击 ⌃ 展开更多' : '已退出收纳模式', 'success', 2000);
+        };
 
-(function initCollapseMode() {
-    function tryApply() {
-        if (typeof settings !== 'undefined') {
-            if (settings.bottomCollapseMode) _applyCollapseState(true);
+        window.toggleCollapsedExtras = function() {
+            const panel = document.getElementById('collapsed-extras-panel');
+            const btn = document.getElementById('collapse-expand-btn');
+            if (!panel) return;
+            const willOpen = panel.style.display === 'none' || panel.style.display === '';
+            panel.style.display = willOpen ? 'block' : 'none';
+            if (btn) btn.classList.toggle('open', willOpen);
+
+            function wireExtra(extraId, primaryId) {
+                const extra = document.getElementById(extraId);
+                const primary = document.getElementById(primaryId);
+                if (extra && primary && !extra._linked) {
+                    extra._linked = true;
+                    extra.addEventListener('click', (e) => { e.stopPropagation(); primary.click(); });
+                }
+            }
+            wireExtra('combo-btn-extra', 'combo-btn');
+            wireExtra('batch-btn-extra', 'batch-btn');
+        };
+
+        window.exitCollapseMode = function() {
+            if (typeof settings !== 'undefined') settings.bottomCollapseMode = false;
+            _applyCollapseState(false);
+            if (typeof throttledSaveData === 'function') throttledSaveData();
+            if (typeof showNotification === 'function') showNotification('已退出收纳模式', 'success', 2000);
+        };
+
+    (function initCollapseMode() {
+        function tryApply() {
+            if (typeof settings !== 'undefined') {
+                if (settings.bottomCollapseMode) _applyCollapseState(true);
+            } else {
+                setTimeout(tryApply, 300);
+            }
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', tryApply);
         } else {
-            setTimeout(tryApply, 300);
+            setTimeout(tryApply, 400);
         }
-    }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', tryApply);
-    } else {
-        setTimeout(tryApply, 400);
-    }
-window.switchStatsTab = function(tab) {
-    var statsPanel = document.getElementById('stats-panel');
-    var favoritesPanel = document.getElementById('favorites-panel');
-    var searchPanel = document.getElementById('search-panel');
-    var allBtns = document.querySelectorAll('.stats-nav-btn');
-    allBtns.forEach(function(b) { b.classList.remove('active'); });
-    var activeBtn = document.querySelector('.stats-nav-btn[data-tab="' + tab + '"]');
-    if (activeBtn) activeBtn.classList.add('active');
+        window.switchStatsTab = function(tab) {
+            var statsPanel = document.getElementById('stats-panel');
+            var favoritesPanel = document.getElementById('favorites-panel');
+            var searchPanel = document.getElementById('search-panel');
+            var allBtns = document.querySelectorAll('.stats-nav-btn');
+            allBtns.forEach(function(b) { b.classList.remove('active'); });
+            var activeBtn = document.querySelector('.stats-nav-btn[data-tab="' + tab + '"]');
+            if (activeBtn) activeBtn.classList.add('active');
 
-    if (statsPanel) statsPanel.style.display = 'none';
-    if (favoritesPanel) favoritesPanel.style.display = 'none';
-    if (searchPanel) searchPanel.style.display = 'none';
+            if (statsPanel) statsPanel.style.display = 'none';
+            if (favoritesPanel) favoritesPanel.style.display = 'none';
+            if (searchPanel) searchPanel.style.display = 'none';
 
-    if (tab === 'stats') {
-        if (statsPanel) statsPanel.style.display = 'block';
-    } else if (tab === 'search') {
-        if (searchPanel) searchPanel.style.display = 'block';
-        setTimeout(function() {
-            var inp = document.getElementById('msg-search-input');
-            if (inp) inp.focus();
-        }, 100);
-    } else {
-        if (favoritesPanel) favoritesPanel.style.display = 'block';
-        if (typeof renderFavorites === 'function') renderFavorites();
-    }
-};
-
-})();
+            if (tab === 'stats') {
+                if (statsPanel) statsPanel.style.display = 'block';
+            } else if (tab === 'search') {
+                if (searchPanel) searchPanel.style.display = 'block';
+                setTimeout(function() {
+                    var inp = document.getElementById('msg-search-input');
+                    if (inp) inp.focus();
+                }, 100);
+            } else {
+                if (favoritesPanel) favoritesPanel.style.display = 'block';
+                if (typeof renderFavorites === 'function') renderFavorites();
+            }
+        };
+    })();
 
 /* ================================================
    自定义首页快捷键 — 全部逻辑

@@ -105,7 +105,8 @@ autoSendInterval: 5,
         customSoundUrl: '',
         soundVolume: 0.15,
         bottomCollapseMode: false,
-        emojiMixEnabled: true
+        emojiMixEnabled: true,
+        enterToSendEnabled: false,
             };
         }
 
@@ -851,6 +852,7 @@ function manageAutoSendTimer() {
                 '#typing-indicator-toggle': 'typingIndicatorEnabled',
                 '#read-no-reply-toggle': 'allowReadNoReply',
                 '#emoji-mix-toggle': 'emojiMixEnabled',
+                '#enter-send-toggle': 'enterToSendEnabled',
                 '#auto-send-toggle': 'autoSendEnabled'
             };
             for (const [sel, prop] of Object.entries(_pillSyncMap)) {

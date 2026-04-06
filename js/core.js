@@ -1623,21 +1623,7 @@ function manageAutoSendTimer() {
             }
 
            // const replyCount = Math.random() < 0.75 ? 1: (Math.random() < 0.95 ? 2: 3);
-                 // 智能计算该回几条：你发了几条未读，我就回几条，但最多只回 3 条（防刷屏）
-            const unreadCount = messages.filter(m => m.sender === 'user' && m.status === 'read').length;
-            let replyCount;
-            if (unreadCount <= 0) {
-                replyCount = 1; // 兜底保底
-            } else if (unreadCount === 1) {
-                replyCount = 1; // 你发1条，我回1条
-            } else if (unreadCount === 2) {
-                replyCount = Math.random() < 0.8 ? 2 : 1; // 你发2条，80%概率回2条，20%概率只回1条（装作没看到第二条）
-            } else {
-                // 你发3条及以上：60%回3条，30%回2条，10%只回1条（真人的敷衍上限）
-                const rand = Math.random();
-                replyCount = rand < 0.6 ? 3 : (rand < 0.9 ? 2 : 1);
-            }
-
+           const replyCount = Math.floor(Math.random() * 5) + 1;
             if (!customReplies || customReplies.length === 0) {
                 (function(){var _tiW=document.getElementById('typing-indicator-wrapper');if(_tiW){var _tiInner=_tiW.querySelector('.typing-indicator');if(_tiInner){_tiInner.classList.add('hiding');setTimeout(function(){_tiW.style.display='none';if(_tiInner)_tiInner.classList.remove('hiding');},240);}else{_tiW.style.display='none';}}})();
                 showNotification('还没有添加字卡，请先到"自定义回复"中添加字卡', 'info', 4000);

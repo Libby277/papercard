@@ -914,46 +914,53 @@ function manageAutoSendTimer() {
         window.scrollToQuotedMessage = function(el) {
             const id = el.getAttribute('data-reply-id');
             if (!id) return;
+            
+            // 新增：自动关闭当前弹出的模态框
+            const closeActiveModal = () => {
+                const activeModal = document.querySelector('.modal.active');
+                if (activeModal && typeof hideModal === 'function') {
+                // 稍微延迟150毫秒关门，让页面滚动先启动，视觉上更丝滑
+                setTimeout(() => hideModal(activeModal), 150);
+                }
+            };
+
             const tryScroll = () => {
-                const target = document.querySelector(`[data-msg-id="${id}"]`);
+                // 兼容不同版本的消息属性名
+                const target = document.querySelector(`[data-msg-id="${id}"]`) || document.querySelector(`[data-id="${id}"]`) || document.querySelector(`[data-message-id="${id}"]`);
                 if (target) {
                 target.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 target.classList.add('msg-highlight');
                 setTimeout(() => target.classList.remove('msg-highlight'), 1500);
+                closeActiveModal(); // 👈 找到并跳转后，直接自动关门
                 return true;
                 }
                 return false;
             };
+            
             if (!tryScroll()) {
-                // 消息没在当前屏幕里，尝试去历史记录里找
                 const msgIndex = messages.findIndex(m => String(m.id) === String(id));
                 if (msgIndex === -1) {
                 if (typeof showNotification === 'function') showNotification('消息可能已被删除', 'info');
                 return;
                 }
                 const needed = messages.length - msgIndex;
-                if (needed > displayedMessageCount) {
-                // 【防卡顿保护】如果消息太老了（比如超过1500条），只加载1500条，防止浏览器直接卡死
-                if (needed > 1500) {
-                    if (typeof showNotification === 'function') showNotification('该消息年代过于久远，为防卡顿已限制加载量', 'info', 2500);
-                    displayedMessageCount = 1500;
-                } else {
-                    displayedMessageCount = needed;
-                }
-                
-                // 【防抖动核心】拉起刹车，阻止 renderMessages 里的“自动滚到底部”动作
+                if (needed > displayedMessageCount) {displayedMessageCount = needed;}
                 window._preventAutoScroll = true;
                 renderMessages(false);
                 window._preventAutoScroll = false;
                 
-                // 等DOM稍微稳定一下，然后直接平滑滚到目标消息
-                setTimeout(tryScroll, 50);
+                setTimeout(() => {
+                    if (tryScroll()) {
+                    // 里面的 tryScroll 已经会自动调用 closeActiveModal 关门了
+                    } else {
+                    if (typeof showNotification === 'function') showNotification('未能定位到该消息', 'info');
+                    }
+                }, 50);
                 } else {
                 if (typeof showNotification === 'function') showNotification('消息可能已被删除', 'info');
                 }
-            }
-        };
-
+            };
+  
         function renderMessages(preserveScroll = false) {
             const container = DOMElements.chatContainer;
             const totalMessages = messages.length;
@@ -1407,63 +1414,11 @@ function manageAutoSendTimer() {
                         }, randomDelay * 0.4);
                     }
                          // Cancel any pending reply timer and reset it (so rapid messages don't stack replies)
-                    const shouldIgnore = settings.allowReadNoReply && (Math.random() <(settings.readNoReplyChance || 0.2));
-
-                    if (shouldIgnore) {
-                        // 【已读不回】：绝不显示"正在输入中"！只等一会再悄悄改已读状态
-                        setTimeout(() => {
-                        let changed = false;
-                        messages.forEach(msg => {
-                            if (msg.sender === 'user' && msg.status !== 'read') {
-                            msg.status = 'read';
-                            changed = true;
-                            }
-                        });
-                            if (changed) {
-                                renderMessages(false);
-                                throttledSaveData();
-                            }
-                        }, 2000); // 等2秒再显示已读，模拟看了一眼就划走的感觉
-                    } else {
-                        // 【正常回复】：先显示"正在输入中"，等对方回复
-                        if (settings.typingIndicatorEnabled) {
-                        const tiWrapper = document.getElementById('typing-indicator-wrapper');
-                        const tiLabel = document.getElementById('typing-indicator-label');
-                        const tiAvatar = document.getElementById('typing-indicator-avatar');
-                        if (tiLabel) tiLabel.textContent = (settings.partnerName || '对方') + ' 正在输入';
-                        if (tiWrapper) {
-                            positionTypingIndicator();
-                            tiWrapper.style.display = 'block';
-                        }
-                        if (tiAvatar) {
-                            const partnerImg = DOMElements.partner.avatar.querySelector('img');
-                            tiAvatar.innerHTML = partnerImg ? `<img src="${partnerImg.src}">` : '<i class="fas fa-user"></i>';
-                        }
-                        if (DOMElements.chatContainer) DOMElements.chatContainer.scrollTop = DOMElements.chatContainer.scrollHeight;
-                        }
-                        // Mark messages as read
-                        setTimeout(() => {
-                        let changed = false;
-                        messages.forEach(msg => {
-                            if (msg.sender === 'user' && msg.status !== 'read') {
-                            msg.status = 'read';
-                            changed = true;
-                            }
-                        });
-                        if (changed) {
-                            renderMessages(false);
-                            throttledSaveData();
-                        }
-                        }, 400);
-                        window._pendingReplyTimer = setTimeout(() => {
-                        window._pendingReplyTimer = null;
-                        simulateReply();
-                        }, randomDelay);
-                    }*/
                     // 判断是否触发“不回复”概率
                     const shouldIgnore = settings.allowReadNoReply && (Math.random() < (settings.readNoReplyChance || 0.2));
                     
                     if (!shouldIgnore) {
+                        
                         // 【准备回复】：先显示“正在输入中”，等时间到了去调 simulateReply
                         if (settings.typingIndicatorEnabled) {
                         const tiWrapper = document.getElementById('typing-indicator-wrapper');
@@ -1486,7 +1441,75 @@ function manageAutoSendTimer() {
                         simulateReply(); // 👈 神奇魔法在这里：它一启动，就会自动把前面所有未读的一起改成已读！
                         }, randomDelay);
                     }
-                    // 如果 shouldIgnore 为 true，这里什么都不写！它就会乖乖保持“未读”，直到主动发消息或下次回复。
+                    // 如果 shouldIgnore 为 true，这里什么都不写！它就会乖乖保持“未读”，直到主动发消息或下次回复。*/
+                          // 1. 【防抖核心】先清除之前的倒计时，并记住之前有没有在倒计时
+                    const hadPendingTimer = !!window._pendingReplyTimer;
+                    if (hadPendingTimer) {
+                        clearTimeout(window._pendingReplyTimer);
+                        window._pendingReplyTimer = null;
+                    }
+                    
+                    // 2. 核心逻辑分支
+                    if (hadPendingTimer) {
+                        // 【情况A】之前已经在计划回复了（可能正在输入中）
+                        // 此时绝对不允许“半途而废”，必须继续回复！
+                        // 直接把新发的这条也改成已读，然后重新开始倒计时
+                        _doMarkReadAndStartTyping();
+                    } else {
+                        // 【情况B】之前没有回复计划（消息处于安静未读状态）
+                        // 这是【唯一】允许投“不回复”骰子的时机！
+                        const shouldIgnore = settings.allowReadNoReply && (Math.random() < (settings.readNoReplyChance || 0.2));
+                        
+                        if (!shouldIgnore) {
+                        // 决定回复：改已读，开始输入
+                        _doMarkReadAndStartTyping();
+                        } else {
+                        // 决定不回复：什么都不干，安安静静保持未读
+                        // 确保没有幽灵的“正在输入”
+                        const tiWrapper = document.getElementById('typing-indicator-wrapper');
+                        if (tiWrapper) tiWrapper.style.display = 'none';
+                        }
+                    }
+                    
+                    // 抽离出来的“改已读并开始输入”的动作包
+                    function _doMarkReadAndStartTyping() {
+                        // 瞬间把所有未读改成已读
+                        let readChanged = false;
+                        messages.forEach(msg => {
+                        if (msg.sender === 'user' && msg.status !== 'read') {
+                            msg.status = 'read';
+                            readChanged = true;
+                        }
+                        });
+                        if (readChanged) {
+                        renderMessages(false);
+                        throttledSaveData();
+                        if (typeof playSound === 'function') playSound('read');
+                        }
+                        
+                        // 显示“正在输入中”
+                        if (settings.typingIndicatorEnabled) {
+                        const tiWrapper = document.getElementById('typing-indicator-wrapper');
+                        const tiLabel = document.getElementById('typing-indicator-label');
+                        const tiAvatar = document.getElementById('typing-indicator-avatar');
+                        if (tiLabel) tiLabel.textContent = (settings.partnerName || '对方') + ' 正在输入';
+                        if (tiWrapper) {
+                            positionTypingIndicator();
+                            tiWrapper.style.display = 'block';
+                        }
+                        if (tiAvatar) {
+                            const partnerImg = DOMElements.partner.avatar.querySelector('img');
+                            tiAvatar.innerHTML = partnerImg ? `<img src="${partnerImg.src}">` : '<i class="fas fa-user"></i>';
+                        }
+                        if (DOMElements.chatContainer) DOMElements.chatContainer.scrollTop = DOMElements.chatContainer.scrollHeight;
+                        }
+                        
+                        // 重新设置倒计时
+                        window._pendingReplyTimer = setTimeout(() => {
+                        window._pendingReplyTimer = null;
+                        simulateReply(); 
+                        }, randomDelay);
+                    }
                 }
             };
 
@@ -1599,7 +1622,22 @@ function manageAutoSendTimer() {
                 }
             }
 
-            const replyCount = Math.random() < 0.75 ? 1: (Math.random() < 0.95 ? 2: 3);
+           // const replyCount = Math.random() < 0.75 ? 1: (Math.random() < 0.95 ? 2: 3);
+                 // 智能计算该回几条：你发了几条未读，我就回几条，但最多只回 3 条（防刷屏）
+            const unreadCount = messages.filter(m => m.sender === 'user' && m.status === 'read').length;
+            let replyCount;
+            if (unreadCount <= 0) {
+                replyCount = 1; // 兜底保底
+            } else if (unreadCount === 1) {
+                replyCount = 1; // 你发1条，我回1条
+            } else if (unreadCount === 2) {
+                replyCount = Math.random() < 0.8 ? 2 : 1; // 你发2条，80%概率回2条，20%概率只回1条（装作没看到第二条）
+            } else {
+                // 你发3条及以上：60%回3条，30%回2条，10%只回1条（真人的敷衍上限）
+                const rand = Math.random();
+                replyCount = rand < 0.6 ? 3 : (rand < 0.9 ? 2 : 1);
+            }
+
             if (!customReplies || customReplies.length === 0) {
                 (function(){var _tiW=document.getElementById('typing-indicator-wrapper');if(_tiW){var _tiInner=_tiW.querySelector('.typing-indicator');if(_tiInner){_tiInner.classList.add('hiding');setTimeout(function(){_tiW.style.display='none';if(_tiInner)_tiInner.classList.remove('hiding');},240);}else{_tiW.style.display='none';}}})();
                 showNotification('还没有添加字卡，请先到"自定义回复"中添加字卡', 'info', 4000);

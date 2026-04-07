@@ -212,7 +212,7 @@
     function _setUI(playing) {
         var dot  = document.getElementById('keepalive-dot');
         var desc = document.getElementById('keepalive-audio-desc');
-        var sw   = document.getElementById('keepalive-audio-switch');
+        var sw   = document.getElementById('keepalive-audio-toggle');
         var row  = document.getElementById('keepalive-bar-row');
 
         if (sw)   sw.classList.toggle('active', _get());
@@ -254,6 +254,16 @@
     window._toggleKeepaliveAudio = function() {
         var next = !_get();
         localStorage.setItem(KEY, String(next));
+        // ↓↓↓ 新增：切换开关颜色 ↓↓↓
+        const row = document.getElementById('keepalive-audio-toggle');
+        if (row) {
+            row.classList.toggle('active', next);
+        }
+        if (typeof settings !== 'undefined') {
+            settings.keepaliveAudioEnabled = next;
+            if (typeof throttledSaveData === 'function') throttledSaveData();
+        }
+        // ↑↑↑ 新增结束 ↑↑↑
         if (next) {
             _start();
             if (typeof showNotification === 'function') showNotification('保活音频已开启 🎵', 'success', 2000);

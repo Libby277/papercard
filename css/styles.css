@@ -967,7 +967,7 @@
         }
         .message-meta-actions {
             position: absolute;
-            top: -12px;
+            top: -35px;
             background-color: var(--secondary-bg);
             border-radius: 20px;
             box-shadow: var(--shadow);
@@ -988,7 +988,6 @@
         .message-wrapper.received .message-meta-actions {
             right: 0;
         }
-
         .meta-action-btn {
             font-size: 13px;
             color: var(--text-secondary);
@@ -1120,12 +1119,61 @@
             background-color: var(--message-sent-bg, var(--accent-color-dark));
         }
 
-        .coin-btn, .batch-btn, .continue-btn, .attachment-btn, .poke-btn, .combo-btn,.action-btn {
+        .coin-btn, .batch-btn, .continue-btn, .attachment-btn, .poke-btn, .combo-btn,.action-btn,.continue-sub-btn {
             background-color: var(--message-received-bg);
             color: var(--text-secondary);
         }
-        .attachment-btn:hover, .continue-btn:hover, .batch-btn:hover, .coin-btn:hover, .poke-btn:hover, .combo-btn:hover,.action-btn:hover {
+        .attachment-btn:hover, .continue-btn:hover, .batch-btn:hover, .coin-btn:hover, .poke-btn:hover, .combo-btn:hover,.action-btn:hover,.continue-sub-btn:hover  {
             color: var(--text-primary);
+        }
+        /* ========== 继续回复弹出按钮组 ========== */
+        .continue-btn-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        /* 子按钮弹出容器（横排药丸形包裹） */
+        .continue-sub-btns {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(6px);
+            display: flex;
+            flex-direction: row;
+            gap: 4px;
+            padding: 5px;
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 22px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+
+        /* 弹出状态 */
+        .continue-sub-btns.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(-8px);
+            pointer-events: auto;
+        }
+
+        /* 底部小三角箭头 */
+        .continue-sub-btns::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%) rotate(45deg);
+            width: 8px;
+            height: 8px;
+            background: var(--secondary-bg);
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
         }
 
         #reply-preview-container {
@@ -9919,11 +9967,15 @@
             transition: none !important;
         }
 
-        /* ── Keepalive audio toggle state desc ── */
-        #keepalive-audio-switch.active .setting-pill-knob {
-            transform: translateX(20px);
+        /* ── Keepalive audio toggle state desc ──*/
+        #keepalive-audio-toggle.active .setting-pill-switch {
+            background: var(--accent-color) !important;
+        } 
+        #keepalive-audio-toggle.active .setting-pill-knob {
+            left: 22px !important;
             background: #fff;
         }
+
 
         /* ── Keepalive dot indicator ── */
         .keepalive-dot {
@@ -11232,3 +11284,4 @@ html[data-theme="dark"] .period-stat-value { color: var(--accent-color-dark); }
     border-radius: 3px;
     background: var(--border-color, #e0e0e0);
 }
+

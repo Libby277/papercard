@@ -161,19 +161,59 @@ function initChatActionListeners() {
             sendMessage();
         }
     });
-    // 在 initChatActionListeners 函数末尾添加
+// ========== 继续回复弹出按钮组逻辑 ==========
+    const continueBtn = document.getElementById('continue-btn');
+    const continueSubBtns = document.getElementById('continue-sub-btns');
+    const continueReplyBtn = document.getElementById('continue-reply-btn');
     const shutUpBtn = document.getElementById('shutUpBtn');
-    if (shutUpBtn) {
-        shutUpBtn.addEventListener('click', () => {
-            if (typeof window.cancelPartnerReply === 'function') {
-                window.cancelPartnerReply();
-                console.log('用户手动打断：对方已闭嘴');
+
+    // 点击大按钮：切换弹出菜单
+    if (continueBtn) {
+        continueBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isActive = continueSubBtns.classList.contains('active');
+            // 先关闭页面上所有其他弹出层（避免叠加）
+            document.querySelectorAll('.continue-sub-btns.active').forEach(el => {
+                if (el !== continueSubBtns) el.classList.remove('active');
+            });
+            if (isActive) {
+                continueSubBtns.classList.remove('active');
+            } else {
+                continueSubBtns.classList.add('active');
             }
         });
     }
 
+    // 子按钮：继续回复
+    if (continueReplyBtn) {
+        continueReplyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            continueSubBtns.classList.remove('active');
+            simulateReply();
+        });
+    }
 
-}
+    // 子按钮：打断对方回复
+    if (shutUpBtn) {
+        shutUpBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            continueSubBtns.classList.remove('active');
+            if (typeof window.cancelPartnerReply === 'function') {
+                window.cancelPartnerReply();
+                showNotification('已打断对方回复', 'success', 1500);
+            }
+        });
+    }
+
+    // 点击页面其他任意位置，自动收起弹出菜单
+    document.addEventListener('click', (e) => {
+        if (continueSubBtns && !continueSubBtns.contains(e.target)) {
+            continueSubBtns.classList.remove('active');
+        }
+    });
+};
+
+
 
 function initModalListeners() {
     const modals = document.querySelectorAll('.modal');
@@ -333,27 +373,27 @@ function initModalListeners() {
                 });
 
 
-fileInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        if (file.size > MAX_AVATAR_SIZE) {
-            showNotification('头像图片不能超过2MB', 'error');
-            return;
-        }
+                fileInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        if (file.size > MAX_AVATAR_SIZE) {
+                            showNotification('头像图片不能超过2MB', 'error');
+                            return;
+                        }
 
-        showNotification('正在裁剪处理...', 'info', 1000);
-        
-        cropImageToSquare(file, 300).then(base64Data => {
-            currentAvatarData = base64Data;
-            previewImg.src = currentAvatarData;
-            previewDiv.style.display = 'block';
-            saveBtn.disabled = false;
-        }).catch(err => {
-            console.error(err);
-            showNotification('图片处理失败', 'error');
-        });
-    }
-});
+                        showNotification('正在裁剪处理...', 'info', 1000);
+                        
+                        cropImageToSquare(file, 300).then(base64Data => {
+                            currentAvatarData = base64Data;
+                            previewImg.src = currentAvatarData;
+                            previewDiv.style.display = 'block';
+                            saveBtn.disabled = false;
+                        }).catch(err => {
+                            console.error(err);
+                            showNotification('图片处理失败', 'error');
+                        });
+                    }
+                });
 
 
                 urlInput.addEventListener('input',
@@ -1106,21 +1146,14 @@ document.getElementById('chat-settings').addEventListener('click', () => {
             maxDelaySlider.addEventListener('change', throttledSaveData);
 
             const settingToggles = {
-                '#reply-toggle': {
-                    prop: 'replyEnabled', name: '引用回复'
-                },
-                '#sound-toggle': {
-                    prop: 'soundEnabled', name: '音效'
-                },
-                '#read-receipts-toggle': {
-                    prop: 'readReceiptsEnabled', name: '已读回执'
-                },
-                '#typing-indicator-toggle': {
-                    prop: 'typingIndicatorEnabled', name: '正在输入'},
-                    '#read-no-reply-toggle': { prop: 'allowReadNoReply', name: '已读不回' },
-                    '#emoji-mix-toggle': { prop: 'emojiMixEnabled', name: '表情混入消息' },
-                    '#enter-send-toggle': { prop: 'enterToSendEnabled', name: '回车发送消息' }
-};
+                '#reply-toggle': {prop: 'replyEnabled', name: '引用回复'},
+                '#sound-toggle': {prop: 'soundEnabled', name: '音效'},
+                '#read-receipts-toggle': {prop: 'readReceiptsEnabled', name: '已读回执'},
+                '#typing-indicator-toggle': {prop: 'typingIndicatorEnabled', name: '正在输入'},
+                '#read-no-reply-toggle': { prop: 'allowReadNoReply', name: '已读不回' },
+                '#emoji-mix-toggle': { prop: 'emojiMixEnabled', name: '表情混入消息' },
+                '#enter-send-toggle': { prop: 'enterToSendEnabled', name: '回车发送消息' },
+            };
 
             for (const [selector, {
                 prop, name
@@ -1141,41 +1174,6 @@ document.getElementById('chat-settings').addEventListener('click', () => {
                     showNotification(`${name}已${settings[prop] ? '开启': '关闭'}`, 'success');
                 });
             }
-            // --- 已读不回概率滑动条逻辑 ---
-           /*const rnrToggle = document.querySelector('#read-no-reply-toggle');
-            const rnrControl = document.getElementById('read-no-reply-chance-control');
-            const rnrSlider = document.getElementById('read-no-reply-chance-slider');
-            const rnrValue = document.getElementById('read-no-reply-chance-value');
-
-
-            // 初始化滑动条状态
-            if (rnrSlider) {
-                rnrSlider.value = Math.round((settings.readNoReplyChance || 0.2) * 100);
-                if (rnrValue) rnrValue.textContent = rnrSlider.value + '%';
-                
-                // 滑动时实时更新数字和内存里的值
-                rnrSlider.addEventListener('input', (e) => {
-                    const val = parseInt(e.target.value);
-                    settings.readNoReplyChance = val / 100;
-                    if (rnrValue) rnrValue.textContent = val + '%';
-                });
-                
-                // 松手时保存数据
-                rnrSlider.addEventListener('change', throttledSaveData);
-            }
-
-            // 控制滑动条的显示/隐藏（开关开了才显示）
-            if (rnrToggle && rnrControl) {
-                // 刚进页面时判断一下
-                rnrControl.style.display = settings.allowReadNoReply ? 'block' : 'none';
-                
-                // 点击开关时，稍微延迟一点点判断最新的状态来显示/隐藏
-                rnrToggle.addEventListener('click', () => {
-                    setTimeout(() => {
-                        rnrControl.style.display = settings.allowReadNoReply ? 'block' : 'none';
-                    }, 20);
-                });
-            }*/
 
             // --- 已读不回概率滑动条逻辑 ---
             const rnrToggle = document.querySelector('#read-no-reply-toggle');
@@ -1197,6 +1195,12 @@ document.getElementById('chat-settings').addEventListener('click', () => {
 
             // 页面刚加载时执行一次同步
             updateRnrUI();
+
+            // 页面加载时同步保活开关状态
+            const kaRow = document.getElementById('keepalive-audio-toggle');
+            if (kaRow) {
+                kaRow.classList.toggle('active', !!settings.keepaliveAudioEnabled);
+            }
 
             // 滑动条拖动逻辑
             if (rnrSlider) {
@@ -1558,9 +1562,9 @@ document.getElementById('chat-settings').addEventListener('click', () => {
             }
 
             // 6. 其他按钮监听
-            if (DOMElements.continueBtn) {
+            /*if (DOMElements.continueBtn) {
                 DOMElements.continueBtn.addEventListener('click', simulateReply);
-            }
+            }*/
         }
 
         DOMElements.messageInput.addEventListener('input', () => {
@@ -1578,7 +1582,7 @@ document.getElementById('chat-settings').addEventListener('click', () => {
             }
         });
 
-        DOMElements.continueBtn.addEventListener('click', simulateReply);
+       // DOMElements.continueBtn.addEventListener('click', simulateReply);
 
         function _applyCollapseState(on) {
             document.body.classList.toggle('bottom-collapse-mode', on);

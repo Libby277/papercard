@@ -1412,7 +1412,7 @@ function manageAutoSendTimer() {
                         if (readChanged) {
                         renderMessages(false);
                         throttledSaveData();
-                        if (typeof playSound === 'function') playSound('read');
+                       // if (typeof playSound === 'function') playSound('read');
                         }
                         
                         // 显示“正在输入中”

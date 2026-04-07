@@ -133,6 +133,7 @@ function renderReplyLibrary() {
                 _activeGroupFilter = null;
                 _searchVisible = false;
                 _searchQuery = '';
+                document.getElementById('add-custom-reply').style.display = btn.dataset.id === 'period' ? 'none' : '';
                 renderReplyLibrary();
             });
         });
@@ -1685,7 +1686,7 @@ function _makeOverlay() {
     return overlay;
 }
 
-function _showBatchAddDialog() {
+/*function _showBatchAddDialog() {
     const overlay = _makeOverlay();
     const panel = document.createElement('div');
     panel.style.cssText = `
@@ -1748,7 +1749,101 @@ function _showBatchAddDialog() {
         renderReplyLibrary();
         showNotification(`✓ 添加 ${added} 条${skipped ? `，跳过 ${skipped} 条重复` : ''}`, 'success');
     };
+}*/
+function _showBatchAddDialog() {
+    const overlay = _makeOverlay();
+    const panel = document.createElement('div');
+    const tabInfo = {
+        custom:  { title: '批量添加字卡',     placeholder: '在此粘贴内容，每行一条…' },
+        pokes:   { title: '批量添加拍一拍',   placeholder: '在此粘贴拍一拍内容，每行一条…' },
+        statuses:{ title: '批量添加状态',     placeholder: '在此粘贴状态内容，每行一条…' },
+        mottos:  { title: '批量添加格言',     placeholder: '在此粘贴格言内容，每行一条…' },
+        intros:  { title: '批量添加开场动画', placeholder: '格式：主标题|副标题，每行一条…\n示例：𝑳𝒐𝒗𝒆|若要由我来谈论爱的话' },
+        emojis:  { title: '批量添加Emoji',    placeholder: '在此粘贴Emoji，每行一个…' }
+    };
+    const info = tabInfo[currentSubTab] || tabInfo.custom;
+    panel.style.cssText = `
+        background:var(--secondary-bg);border-radius:22px;padding:24px;
+        width:92%;max-width:420px;
+        box-shadow:0 24px 80px rgba(0,0,0,.45);
+        animation:popIn 0.22s cubic-bezier(.34,1.56,.64,1);
+    `;
+    panel.innerHTML = `
+        <style>@keyframes popIn { from{opacity:0;transform:scale(.93)} to{opacity:1;transform:scale(1)} }</style>
+        <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px;">${info.title}</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6;">每行一条，自动去重</div>
+        <textarea id="batch-add-input" rows="10" placeholder="${info.placeholder}" style="
+            width:100%;box-sizing:border-box;padding:12px 14px;
+            border:1.5px solid var(--border-color);border-radius:13px;
+            background:var(--primary-bg);color:var(--text-primary);
+            font-size:13px;font-family:var(--font-family);outline:none;resize:vertical;
+            line-height:1.6;transition:border 0.18s;
+        "></textarea>
+        <div style="font-size:11px;color:var(--text-secondary);margin-top:6px;margin-bottom:16px;">
+            <span id="batch-add-count">0 条</span>
+        </div>
+        <div style="display:flex;gap:10px;">
+            <button id="ba-cancel" style="flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:13px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
+            <button id="ba-confirm" style="flex:2;padding:12px;border:none;border-radius:13px;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-family);">添加</button>
+        </div>
+    `;
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    const ta = panel.querySelector('#batch-add-input');
+    const countEl = panel.querySelector('#batch-add-count');
+    ta.addEventListener('input', () => {
+        const lines = ta.value.split('\n').filter(l => l.trim());
+        countEl.textContent = `${lines.length} 条`;
+    });
+    ta.addEventListener('focus', e => { e.target.style.borderColor = 'var(--accent-color)'; });
+    ta.addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
+    panel.querySelector('#ba-cancel').onclick = () => overlay.remove();
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+    panel.querySelector('#ba-confirm').onclick = () => {
+        const lines = ta.value.split('\n').map(l => l.trim()).filter(Boolean);
+        if (!lines.length) { showNotification('请输入内容', 'warning'); return; }
+
+        let added = 0, skipped = 0;
+        lines.forEach(val => {
+            // 开场动画必须包含 | 分隔符
+            if (currentSubTab === 'intros' && !val.includes('|')) {
+                skipped++;
+                return;
+            }
+            const norm = normalizeStringStrict(val);
+            let targetArr = null;
+            let compareArr = null;
+            if (currentSubTab === 'custom')   { targetArr = customReplies;   compareArr = [...customReplies, ...CONSTANTS.REPLY_MESSAGES]; }
+            else if (currentSubTab === 'pokes')    { targetArr = customPokes;     compareArr = customPokes; }
+            else if (currentSubTab === 'statuses')  { targetArr = customStatuses;  compareArr = customStatuses; }
+            else if (currentSubTab === 'mottos')    { targetArr = customMottos;     compareArr = customMottos; }
+            else if (currentSubTab === 'intros')    { targetArr = customIntros;     compareArr = customIntros; }
+            else if (currentSubTab === 'emojis')    { targetArr = customEmojis;     compareArr = customEmojis; }
+            if (!targetArr) return;
+
+            if (compareArr.some(r => normalizeStringStrict(r) === norm)) {
+                skipped++;
+                return;
+            }
+            targetArr.push(val);
+            added++;
+        });
+
+        throttledSaveData();
+        overlay.remove();
+        renderReplyLibrary();
+        let msg = `✓ 添加 ${added} 条`;
+        if (skipped > 0) {
+            msg += currentSubTab === 'intros'
+                ? `，跳过 ${skipped} 条（格式错误或重复）`
+                : `，跳过 ${skipped} 条重复`;
+        }
+        showNotification(msg, 'success');
+    };
 }
+
 
 function initReplyLibraryListeners() {
     const entryBtn = document.getElementById('custom-replies-function');
@@ -1788,7 +1883,8 @@ function initReplyLibraryListeners() {
             if (annPanel) annPanel.style.display = 'none';
             if (crToolbar) crToolbar.style.display = '';
             if (subTabs) subTabs.style.display = '';
-            if (addBtn) addBtn.style.display = '';
+            //if (addBtn) addBtn.style.display = '';
+            if (addBtn) addBtn.style.display = currentSubTab === 'period' ? 'none' : '';
             if (titleEl) titleEl.textContent = '内容管理';
 
             _batchModeActive = false;
@@ -1846,7 +1942,7 @@ function initReplyLibraryListeners() {
         });
     }
 
-    const addBtn = document.getElementById('add-custom-reply');
+    /*const addBtn = document.getElementById('add-custom-reply');
     if (addBtn) {
         addBtn.addEventListener('click', () => {
             if (currentSubTab === 'stickers') {
@@ -1890,8 +1986,115 @@ function initReplyLibraryListeners() {
                 showNotification('✓ 添加成功', 'success');
             }
         });
+    }*/
+   const addBtn = document.getElementById('add-custom-reply');
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            // 表情库走文件上传
+            if (currentSubTab === 'stickers') {
+                document.getElementById('sticker-file-input')?.click();
+                return;
+            }
+            // 其他全部走批量添加
+            _showBatchAddDialog();
+        });
     }
 }
+
+// 添加月经关怀消息
+window.addPeriodCareMsg = function(category) {
+    const catNames = {
+        approaching: '月经临近',
+        during: '月经期间',
+        delayed: '月经推迟'
+    };
+    const catDescs = {
+        approaching: '月经来临前3天发送的消息',
+        during: '月经期间每天发送的消息',
+        delayed: '月经推迟时发送的消息'
+    };
+    const overlay = _makeOverlay();
+    const panel = document.createElement('div');
+    panel.style.cssText = `
+        background:var(--secondary-bg);border-radius:22px;padding:24px;
+        width:92%;max-width:420px;
+        box-shadow:0 24px 80px rgba(0,0,0,.45);
+        animation:popIn 0.22s cubic-bezier(.34,1.56,.64,1);
+    `;
+    panel.innerHTML = `
+        <style>@keyframes popIn { from{opacity:0;transform:scale(.93)} to{opacity:1;transform:scale(1)} }</style>
+        <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px;">批量添加${catNames[category]}消息</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6;">${catDescs[category]}，每行一条，自动去重</div>
+        <textarea id="period-batch-input" rows="8" placeholder="在此粘贴内容，每行一条…" style="
+            width:100%;box-sizing:border-box;padding:12px 14px;
+            border:1.5px solid var(--border-color);border-radius:13px;
+            background:var(--primary-bg);color:var(--text-primary);
+            font-size:13px;font-family:var(--font-family);outline:none;resize:vertical;
+            line-height:1.6;transition:border 0.18s;
+        "></textarea>
+        <div style="font-size:11px;color:var(--text-secondary);margin-top:6px;margin-bottom:16px;">
+            <span id="period-batch-count">0 条</span>
+        </div>
+        <div style="display:flex;gap:10px;">
+            <button id="period-ba-cancel" style="flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:13px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
+            <button id="period-ba-confirm" style="flex:2;padding:12px;border:none;border-radius:13px;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-family);">添加</button>
+        </div>
+    `;
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    const ta = panel.querySelector('#period-batch-input');
+    const countEl = panel.querySelector('#period-batch-count');
+    ta.addEventListener('input', () => {
+        const lines = ta.value.split('\n').filter(l => l.trim());
+        countEl.textContent = `${lines.length} 条`;
+    });
+    ta.addEventListener('focus', e => { e.target.style.borderColor = 'var(--accent-color)'; });
+    ta.addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
+    panel.querySelector('#period-ba-cancel').onclick = () => overlay.remove();
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+    panel.querySelector('#period-ba-confirm').onclick = () => {
+        const lines = ta.value.split('\n').map(l => l.trim()).filter(Boolean);
+        if (!lines.length) { showNotification('请输入内容', 'warning'); return; }
+        let added = 0, skipped = 0;
+        const arr = periodCareMessages[category];
+        lines.forEach(val => {
+            if (arr.some(r => normalizeStringStrict(r) === normalizeStringStrict(val))) {
+                skipped++;
+                return;
+            }
+            arr.push(val);
+            added++;
+        });
+        throttledSaveData();
+        overlay.remove();
+        _renderPeriodCareTab(document.getElementById('custom-replies-list'));
+        showNotification(`✓ 添加 ${added} 条${skipped ? `，跳过 ${skipped} 条重复` : ''}`, 'success');
+    };
+};
+
+// 编辑月经关怀消息（保持不变）
+window.editPeriodCareMsg = function(category, index) {
+    const current = periodCareMessages[category][index];
+    const input = prompt('编辑消息：', current);
+    if (input !== null && input.trim()) {
+        periodCareMessages[category][index] = input.trim();
+        throttledSaveData();
+        _renderPeriodCareTab(document.getElementById('custom-replies-list'));
+        showNotification('已保存', 'success');
+    }
+};
+
+// 删除月经关怀消息（保持不变）
+window.deletePeriodCareMsg = function(category, index) {
+    if (confirm('确定删除这条消息吗？')) {
+        periodCareMessages[category].splice(index, 1);
+        throttledSaveData();
+        _renderPeriodCareTab(document.getElementById('custom-replies-list'));
+        showNotification('已删除', 'success');
+    }
+};
 
 function getCategoryName(tabId) {
     return { custom: '回复', pokes: '拍一拍', statuses: '状态', mottos: '格言', intros: '开场语' }[tabId] || '内容';
@@ -2227,7 +2430,7 @@ function _renderPeriodCareTab(list) {
 }
 
 // 添加月经关怀消息
-window.addPeriodCareMsg = function(category) {
+/*window.addPeriodCareMsg = function(category) {
     const input = prompt('请输入新的关怀消息：');
     if (input && input.trim()) {
         periodCareMessages[category].push(input.trim());
@@ -2257,5 +2460,5 @@ window.deletePeriodCareMsg = function(category, index) {
         _renderPeriodCareTab(document.getElementById('custom-replies-list'));
         showNotification('已删除', 'success');
     }
-};
+};*/
 

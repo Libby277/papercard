@@ -244,9 +244,25 @@
     <textarea class="message-input" id="message-input" placeholder="" rows="1"></textarea>
     
     <div class="input-buttons">
-    <button class="continue-btn input-btn" id="continue-btn" title="让对方继续说"><i class="fa-solid fa-comment-dots"></i></button>
+    <!--<button class="continue-btn input-btn" id="continue-btn" title="让对方继续说"><i class="fa-solid fa-comment-dots"></i></button>-->
         <!--<button class="batch-btn input-btn collapse-hideable" id="batch-btn" title="批量发送模式"><i class="fas fa-layer-group"></i></button>-->
         <!--<button  class="action-btn input-btn" id="shutUpBtn" title="打断对方回复"><i class="fa-solid fa-xmark"></i></button>-->
+        
+        <div class="continue-btn-wrapper" id="continue-btn-wrapper">
+            <div class="continue-sub-btns" id="continue-sub-btns">
+                <button class="continue-sub-btn input-btn" id="continue-reply-btn" title="继续回复">
+                    <i class="fa-solid fa-comment-dots"></i>
+                </button>
+                <button class="continue-sub-btn input-btn shut-up-sub-btn" id="shutUpBtn" title="打断对方回复">
+                    <i class="fa-solid fa-comment-slash"></i>
+                </button>
+            </div>
+            <button class="action-btn input-btn" id="continue-btn" title="更多操作">
+                <i class="fa-solid fa-ellipsis"></i>
+            </button>
+        </div>
+
+
         <button class="send-btn input-btn" id="send-btn" title="发送消息"><i class="fas fa-paper-plane"></i></button>
         
         <div class="sticker-picker-popover" id="user-sticker-picker">
@@ -937,7 +953,7 @@
                             <button id="rr-style-text" class="modal-btn modal-btn-secondary" style="padding:5px 12px;font-size:12px;" onclick="setReadReceiptStyle('text')">文字</button>
                         </div>
                         <div class="setting-pill-row" id="read-no-reply-toggle">
-                            <span class="setting-pill-icon"><i class="fas fa-comment-slash"></i></span>
+                            <span class="setting-pill-icon"><i class="fa-solid fa-hand"></i></span>
                             <span class="setting-pill-label">延迟已读（不秒回）</span>
                             <div class="setting-pill-switch"><div class="setting-pill-knob"></div></div>
                         </div>

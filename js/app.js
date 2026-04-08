@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     try {
-        safeAwait(Promise.all([
+      /* safeAwait(Promise.all([
             setupEventListeners?.(),
             initThemeEditor?.(),
             initAnniversaryModule?.(),
@@ -102,7 +102,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         updateLoader('正在建立安全连接...', '10%');
+        await safeAwait(initializeSession());*/
+        // ========== 修改后 ==========
+        if (typeof localforage === 'undefined') {
+        console.warn('LocalForage 未加载，将使用 localStorage 降级方案');
+        }
+        updateLoader('正在建立安全连接...', '10%');
+
+        // 👇 先初始化 SESSION_ID，再执行其他模块
         await safeAwait(initializeSession());
+
+        safeAwait(Promise.all([
+        setupEventListeners?.(),
+        initThemeEditor?.(),
+        // initAnniversaryModule?.(),  ← 删掉这行，setupEventListeners 里面已经调过了
+        initMoodListeners?.(),
+        initDecisionModule?.(),
+        initComboMenu?.()
+        ]));
+
 
         updateLoader('正在读取记忆存档...', '40%');
         await safeAwait(loadData());

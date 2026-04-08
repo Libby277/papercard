@@ -1,55 +1,53 @@
 /**
- * features/tour.js - 引导教程 Tour & Anniversary
- * 用户引导、纪念日与系列功能
+ * features/anniversary.js - 重要日与提醒系统
  */
 
-
-async function createNewSession(switchToIt = true) {
-    const newId = Date.now().toString(36) + Math.random().toString(36).substr(2);
-    const newSession = {
-        id: newId,
-        name: `会话 ${new Date().toLocaleDateString()}`,
-        createdAt: Date.now()
-    };
-
-    sessionList.push(newSession);
-    await localforage.setItem(`${APP_PREFIX}sessionList`, sessionList);
-
-    if (switchToIt) {
-        window.location.hash = newId;
-        window.location.reload();
-    }
-    
-    return newId;
-}
+// 当前正在编辑的纪念日ID（用于区分新增/编辑）
+let currentEditAnnId = null;
 
 window.selectAnnType = function(type) {
     currentAnniversaryType = type;
-    currentAnnType = type; 
-    document.querySelectorAll('.anniversary-type-btn').forEach(btn => {
-        if(btn.dataset.type === type) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-    });
+    currentAnnType = type;
     
+    // 按钮高亮
+    document.querySelectorAll('.ann-type-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === type);
+    });
+
+    // 提示语
     const hint = document.getElementById('ann-type-desc');
-    if(hint) {
-        hint.textContent = type === 'anniversary' 
-            ? '计算从过去某一天到现在已经过了多少天 (例如: 恋爱纪念日)' 
-            : '计算从现在到未来某一天还剩下多少天 (例如: 对方生日)';
+    if (hint) {
+        if (type === 'anniversary') hint.textContent = '计算从过去某一天到现在已经过了多少天';
+        else if (type === 'birthday') hint.textContent = '每年当天会触发专属通知与寄语';
+        else hint.textContent = '计算从现在到未来某一天还剩下多少天';
+    }
+
+    // 👉 核心修改：切换选项显示，并处理倒数日隐藏
+    const annOpt = document.getElementById('ann-opt-anniversary');
+    const birOpt = document.getElementById('ann-opt-birthday');
+    const reminderGroup = document.getElementById('ann-reminder-settings-group'); // 获取大容器
+
+    if (type === 'countdown') {
+        // 倒数日：隐藏整个提醒组
+        if(reminderGroup) reminderGroup.style.display = 'none';
+    } else {
+        // 纪念日或生日：显示提醒组
+        if(reminderGroup) reminderGroup.style.display = 'block';
+        
+        // 然后分别控制子选项
+        if(annOpt) annOpt.style.display = (type === 'anniversary') ? 'block' : 'none';
+        if(birOpt) birOpt.style.display = (type === 'birthday') ? 'block' : 'none';
     }
 };
 
+
 window.deleteAnniversary = function(id, event) {
-    if(event) event.stopPropagation();
-    
-    if(confirm('确定要删除这个纪念日吗？')) {
+    if (event) event.stopPropagation();
+    if (confirm('确定要删除这个重要日吗？')) {
         anniversaries = anniversaries.filter(a => a.id !== id);
         throttledSaveData();
         renderAnniversariesList();
-        showNotification('纪念日已删除', 'success');
+        showNotification('重要日已删除', 'success');
     }
 };
 
@@ -68,6 +66,7 @@ async function fillAnnHeaderCard(ann) {
     const isCountdown = ann.type === 'countdown';
     const targetDate = new Date(ann.date);
     let diffDays;
+
     if (isCountdown) {
         diffDays = Math.ceil((targetDate - now) / (1000 * 60 * 60 * 24));
         if (diffDays < 0) diffDays = 0;
@@ -80,8 +79,10 @@ async function fillAnnHeaderCard(ann) {
     const labelEl = document.getElementById('ann-header-label');
     if (iconEl) iconEl.textContent = isCountdown ? '♡' : '♥';
     if (labelEl) labelEl.textContent = isCountdown ? 'COUNTDOWN' : 'ANNIVERSARY';
+
     document.getElementById('ann-header-title').textContent = ann.name;
     document.getElementById('ann-header-date').textContent = ann.date;
+
     const daysEl = document.getElementById('ann-header-days');
     daysEl.innerHTML = `${diffDays.toLocaleString('zh-CN')}<span class="ann-header-days-unit">${isCountdown ? '天后' : '天'}</span>`;
 
@@ -90,9 +91,17 @@ async function fillAnnHeaderCard(ann) {
         milestonesEl.innerHTML = '';
         if (!isCountdown) {
             const milestones = [];
-            if (diffDays >= 100) { const n = Math.floor(diffDays / 100); milestones.push(`🎉 第 ${n * 100} 天`); }
-            if (diffDays >= 365) { const n = Math.floor(diffDays / 365); milestones.push(`🎊 ${n} 周年`); }
-            if (diffDays > 0 && diffDays < 100) { milestones.push(`💫 距 100 天还有 ${100 - diffDays} 天`); }
+            if (diffDays >= 100) {
+                const n = Math.floor(diffDays / 100);
+                milestones.push(`🎉 第 ${n * 100} 天`);
+            }
+            if (diffDays >= 365) {
+                const n = Math.floor(diffDays / 365);
+                milestones.push(`🎊 ${n} 周年`);
+            }
+            if (diffDays > 0 && diffDays < 100) {
+                milestones.push(`💫 距 100 天还有 ${100 - diffDays} 天`);
+            }
             milestones.forEach(m => milestonesEl.insertAdjacentHTML('beforeend', `<span class="ann-milestone-chip">${m}</span>`));
         }
     }
@@ -108,11 +117,116 @@ async function fillAnnHeaderCard(ann) {
     if (activeEl) activeEl.classList.add('ann-item-active');
 }
 
+function addAnniversary() {
+    const nameInput = document.getElementById('ann-input-name');
+    const dateInput = document.getElementById('ann-input-date');
+    const name = nameInput ? nameInput.value.trim() : '';
+    const date = dateInput ? dateInput.value : '';
+
+    if (!name || !date) {
+        showNotification('请填写名称和日期', 'error');
+        return;
+    }
+
+    const type = (typeof currentAnnType !== 'undefined' ? currentAnnType : null) || 
+                 (typeof currentAnniversaryType !== 'undefined' ? currentAnniversaryType : 'anniversary');
+
+    const remindRules = [];
+    
+    // 1. 普通复选框
+    document.querySelectorAll('.ann-reminder-checkbox:checked').forEach(cb => {
+        // 过滤掉需要特殊处理的（自定义天数、间隔年），只取普通值
+        if (cb.id !== 'ann-opt-custom-check' && cb.id !== 'ann-opt-interval-check') {
+            remindRules.push(cb.value);
+        }
+    });
+
+    // 2. 纪念日自定义天数（支持多行/逗号分割）
+    const customCheck = document.getElementById('ann-opt-custom-check');
+    const customDaysEl = document.getElementById('ann-opt-custom-days');
+    if (customCheck && customCheck.checked && customDaysEl && customDaysEl.value) {
+        const rawDays = customDaysEl.value;
+        // 分割逻辑：先按换行分割，再按逗号分割
+        rawDays.split('\n').forEach(line => {
+            line.split(',').forEach(d => {
+                const day = parseInt(d.trim());
+                if (!isNaN(day) && day > 0) {
+                    remindRules.push('custom:' + day);
+                }
+            });
+        });
+    }
+    // 🆕 3. 纪念日间隔年逻辑（插入到这里）
+    const yearlyIntervalCheck = document.getElementById('ann-opt-yearly-interval-check');
+    const yearlyIntervalEl = document.getElementById('ann-opt-yearly-interval-val');
+    if (yearlyIntervalCheck && yearlyIntervalCheck.checked && yearlyIntervalEl && yearlyIntervalEl.value) {
+        const yrs = parseInt(yearlyIntervalEl.value);
+        if (!isNaN(yrs) && yrs > 0) {
+            remindRules.push('anniversaryYearly:' + yrs);
+        }
+    }
+    // 3. 生日间隔年
+    const intervalCheck = document.getElementById('ann-opt-interval-check');
+    const intervalEl = document.getElementById('ann-opt-interval-years');
+    if (intervalCheck && intervalCheck.checked && intervalEl && intervalEl.value) {
+        const years = parseInt(intervalEl.value);
+        if (!isNaN(years) && years > 0) {
+            remindRules.push('interval:' + years);
+        }
+    }
+
+    // 4. 文案（直接保存多行文本即可）
+    const customMsgEl = document.getElementById('ann-custom-message');
+    const customMessage = customMsgEl ? customMsgEl.value.trim() : '';
+
+    // 编辑或新增逻辑
+    if (currentEditAnnId) {
+        const index = anniversaries.findIndex(a => a.id === currentEditAnnId);
+        if (index > -1) {
+            anniversaries[index].name = name;
+            anniversaries[index].date = date;
+            anniversaries[index].type = type;
+            anniversaries[index].remindRules = remindRules;
+            anniversaries[index].customMessage = customMessage;
+            currentEditAnnId = null;
+        }
+    } else {
+        anniversaries.push({
+            id: Date.now(),
+            name: name,
+            date: date,
+            type: type,
+            remindRules: remindRules,
+            customMessage: customMessage
+        });
+    }
+
+    throttledSaveData();
+    renderAnniversariesList();
+
+    // 清空
+    if (nameInput) nameInput.value = '';
+    if (dateInput) dateInput.value = '';
+    if (customMsgEl) customMsgEl.value = '';
+    if (customDaysEl) customDaysEl.value = '';
+    if (intervalEl) intervalEl.value = '';
+    document.querySelectorAll('.ann-reminder-checkbox').forEach(cb => cb.checked = false);
+
+    const annFormWrapper = document.getElementById('ann-form-wrapper');
+    const annToggleBtn = document.getElementById('ann-toggle-btn');
+    if (annFormWrapper) annFormWrapper.classList.remove('active');
+    if (annToggleBtn) annToggleBtn.classList.remove('active');
+
+    showNotification('重要日已保存', 'success');
+
+}
+
+
 function renderAnniversariesList() {
     const listContainer = document.getElementById('ann-list-container');
     const headerCard = document.getElementById('ann-header-card');
     const toolbar = document.getElementById('ann-card-toolbar');
-    
+
     if (!listContainer) return;
     listContainer.innerHTML = '';
 
@@ -122,10 +236,10 @@ function renderAnniversariesList() {
         if (headerCard) headerCard.style.display = 'none';
         if (toolbar) toolbar.style.display = 'none';
         listContainer.innerHTML = `
-            <div class="ann-empty">
-                <div class="ann-empty-icon">💝</div>
-                <p>还没有纪念日<br>去添加一个属于你们的日子吧~</p>
-            </div>`;
+        <div class="ann-empty">
+            <div class="ann-empty-icon">💝</div>
+            <p>还没有纪念日<br>去添加一个属于你们的日子吧~</p>
+        </div>`;
         return;
     }
 
@@ -145,7 +259,7 @@ function renderAnniversariesList() {
             typeLabel = '倒数';
             dayLabel = '天后';
             diffDays = Math.ceil((targetDate - now) / (1000 * 60 * 60 * 24));
-            if(diffDays < 0) diffDays = 0;
+            if (diffDays < 0) diffDays = 0;
         } else {
             typeClass = 'type-past';
             typeLabel = '已过';
@@ -155,29 +269,95 @@ function renderAnniversariesList() {
 
         const formattedDays = diffDays.toLocaleString('zh-CN');
 
+        // 点击卡片 -> 进入编辑模式
         const html = `
-            <div class="ann-item-card ${typeClass}" data-ann-id="${ann.id}" onclick="selectAnnCard(${ann.id})" style="cursor:pointer;">
-                <div class="ann-item-left">
-                    <div class="ann-item-name">${ann.name}</div>
-                    <div class="ann-item-date">
-                        <span class="ann-tag">${typeLabel}</span>
-                        ${ann.date}
-                    </div>
-                </div>
-                <div style="display:flex; align-items:center;">
-                    <div class="ann-item-right">
-                        <div class="ann-item-days">${formattedDays}</div>
-                        <div class="ann-item-days-unit">${dayLabel}</div>
-                    </div>
-                    <div class="ann-delete-btn" onclick="event.stopPropagation(); deleteAnniversaryItem(${ann.id})">
-                        <i class="fas fa-times"></i>
-                    </div>
+        <div class="ann-item-card ${typeClass}" data-ann-id="${ann.id}" onclick="editAnnCard(${ann.id})" style="cursor:pointer;">
+            <div class="ann-item-left">
+                <div class="ann-item-name">${ann.name}</div>
+                <div class="ann-item-date">
+                    <span class="ann-tag">${typeLabel}</span>
+                    ${ann.date}
                 </div>
             </div>
+            <div style="display:flex; align-items:center;">
+                <div class="ann-item-right">
+                    <div class="ann-item-days">${formattedDays}</div>
+                    <div class="ann-item-days-unit">${dayLabel}</div>
+                </div>
+                <div class="ann-delete-btn" onclick="event.stopPropagation(); deleteAnniversaryItem(${ann.id})">
+                    <i class="fas fa-times"></i>
+                </div>
+            </div>
+        </div>
         `;
         listContainer.insertAdjacentHTML('beforeend', html);
     });
 }
+
+/**
+ * 编辑模式：点击卡片时填充数据
+ */
+
+window.editAnnCard = function(id) {
+    const ann = anniversaries.find(a => a.id === id);
+    if (!ann) return;
+
+    currentEditAnnId = ann.id;
+    const editorSlide = document.getElementById('ann-editor-slide');
+    if (editorSlide) editorSlide.classList.add('active');
+
+    document.getElementById('ann-input-name').value = ann.name || '';
+    document.getElementById('ann-input-date').value = ann.date || '';
+    document.getElementById('ann-custom-message').value = ann.customMessage || ''; // 多行会自动保留
+    
+    selectAnnType(ann.type);
+
+    // 清空所有复选框
+    document.querySelectorAll('.ann-reminder-checkbox').forEach(cb => cb.checked = false);
+    const customDaysEl = document.getElementById('ann-opt-custom-days');
+    const intervalEl = document.getElementById('ann-opt-interval-years');
+    if(customDaysEl) customDaysEl.value = '';
+    if(intervalEl) intervalEl.value = '';
+
+    // 回显规则
+    let customDaysArray = [];
+    if (ann.remindRules) {
+        ann.remindRules.forEach(rule => {
+            // 普通复选框
+            const cb = document.querySelector(`.ann-reminder-checkbox[value="${rule}"]`);
+            if (cb) cb.checked = true;
+
+            // 自定义天数：收集起来
+            if (rule.startsWith('custom:')) {
+                customDaysArray.push(rule.split(':')[1]);
+            }
+                        // 🆕 新增：纪念日间隔年回显
+            if (rule.startsWith('anniversaryYearly:')) {
+                const y = rule.split(':')[1];
+                const check = document.getElementById('ann-opt-yearly-interval-check');
+                const input = document.getElementById('ann-opt-yearly-interval-val');
+                if (check) check.checked = true;
+                if (input) input.value = y;
+            }
+
+            // 间隔年
+            if (rule.startsWith('interval:')) {
+                const y = rule.split(':')[1];
+                const check = document.getElementById('ann-opt-interval-check');
+                if(check) check.checked = true;
+                if(intervalEl) intervalEl.value = y;
+            }
+        });
+    }
+
+    // 回显自定义天数（用逗号连接）
+    if (customDaysArray.length > 0) {
+        const check = document.getElementById('ann-opt-custom-check');
+        if(check) check.checked = true;
+        if(customDaysEl) customDaysEl.value = customDaysArray.join(', ');
+    }
+};
+
 
 window.selectAnnCard = function(id) {
     const ann = anniversaries.find(a => a.id === id);
@@ -192,22 +372,109 @@ window.clearAnnCardBg = async function() {
     showNotification('封面图已清除', 'success');
 };
 
+/**
+ * 核心功能：检测系统，每日运行
+ */
+
+function initSpecialDaySystem() {
+    const today = new Date();
+    const todayStr = today.toDateString();
+    
+    const lastNotifyDate = localStorage.getItem('lastSpecialNotifyDate');
+    const alreadyNotified = lastNotifyDate === todayStr;
+
+    let specialEvent = null;
+
+    anniversaries.forEach(ann => {
+        const target = new Date(ann.date);
+        if (!ann.remindRules || ann.remindRules.length === 0) return;
+
+        // --- 纪念日逻辑 ---
+        if (ann.type === 'anniversary') {
+            const days = Math.floor((today - target) / (1000 * 60 * 60 * 24));
+            if (days < 0) return;
+
+            ann.remindRules.forEach(rule => {
+                if (rule === '100' && days % 100 === 0 && days !== 0) specialEvent = ann;
+                if (rule === '1000' && days % 1000 === 0 && days !== 0) specialEvent = ann;
+                if (rule.startsWith('custom:')) {
+                    const customDay = parseInt(rule.split(':')[1]);
+                    if (days === customDay) specialEvent = ann;
+                }
+            });
+             // 🆕 新增：纪念日周年逻辑判断
+            // 判断今天是否是月日相同的日期
+            const isAnniversaryDate = target.getMonth() === today.getMonth() && target.getDate() === today.getDate();
+            if (isAnniversaryDate) {
+                const years = today.getFullYear() - target.getFullYear();
+                if (years > 0) {
+                    ann.remindRules.forEach(rule => {
+                        if (rule.startsWith('anniversaryYearly:')) {
+                            const interval = parseInt(rule.split(':')[1]);
+                            if (interval > 0 && years % interval === 0) {
+                                specialEvent = ann;
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        // --- 生日逻辑 ---
+        if (ann.type === 'birthday') {
+            const isDateMatch = target.getMonth() === today.getMonth() && target.getDate() === today.getDate();
+            if (isDateMatch) {
+                const yearsPassed = today.getFullYear() - target.getFullYear();
+                
+                if (ann.remindRules.includes('yearly')) specialEvent = ann;
+                if (ann.remindRules.includes('decade') && yearsPassed % 10 === 0 && yearsPassed > 0) {
+                    specialEvent = ann;
+                }
+                // 检查自定义间隔
+                ann.remindRules.forEach(rule => {
+                    if (rule.startsWith('interval:')) {
+                        const yr = parseInt(rule.split(':')[1]);
+                        if (yr > 0 && yearsPassed % yr === 0 && yearsPassed > 0) {
+                            specialEvent = ann;
+                        }
+                    }
+                });
+            }
+        }
+    });
+
+    if (specialEvent) {
+        // 👉 随机抽取文案
+        let msg = `今天是特别的日子：${specialEvent.name}`;
+        if (specialEvent.customMessage) {
+            const lines = specialEvent.customMessage.split('\n').filter(s => s.trim() !== '');
+            if (lines.length > 0) {
+                msg = lines[Math.floor(Math.random() * lines.length)];
+            }
+        }
+        
+        window._todaySpecialNote = msg;
+        
+        if (!alreadyNotified && Notification.permission === 'granted') {
+            new Notification('传讯 · 重要日提醒', { body: msg });
+            localStorage.setItem('lastSpecialNotifyDate', todayStr);
+        }
+    } else {
+        window._todaySpecialNote = null;
+    }
+}
+
 
 function initAnniversaryModule() {
     const entryBtn = document.getElementById('anniversary-function');
-    
     if (entryBtn) {
         const newBtn = entryBtn.cloneNode(true);
         entryBtn.parentNode.replaceChild(newBtn, entryBtn);
-        
         newBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('重要日按钮被点击');
-            
             const advancedModal = document.getElementById('advanced-modal');
             const annModal = document.getElementById('anniversary-modal');
-            
             if (advancedModal) hideModal(advancedModal);
             renderAnniversariesList();
             if (annModal) showModal(annModal);
@@ -223,10 +490,16 @@ function initAnniversaryModule() {
 
     const openAddBtn = document.getElementById('open-ann-add-btn');
     const editorSlide = document.getElementById('ann-editor-slide');
+    
+    // 打开添加按钮 -> 重置编辑ID，确保是“新增模式”
     if (openAddBtn) {
         openAddBtn.onclick = () => {
+            currentEditAnnId = null;
             document.getElementById('ann-input-name').value = '';
             document.getElementById('ann-input-date').value = '';
+            document.getElementById('ann-custom-message').value = '';
+            document.querySelectorAll('.ann-reminder-checkbox').forEach(cb => cb.checked = false);
+            
             window.selectAnnType('anniversary');
             if (editorSlide) editorSlide.classList.add('active');
         };
@@ -236,6 +509,7 @@ function initAnniversaryModule() {
     if (closeEditorBtn) {
         closeEditorBtn.onclick = () => {
             if (editorSlide) editorSlide.classList.remove('active');
+            currentEditAnnId = null;
         };
     }
 
@@ -243,9 +517,8 @@ function initAnniversaryModule() {
     if (saveBtn) {
         const newSave = saveBtn.cloneNode(true);
         saveBtn.parentNode.replaceChild(newSave, saveBtn);
-        
         newSave.addEventListener('click', () => {
-            addAnniversary(); 
+            addAnniversary();
             if (editorSlide) editorSlide.classList.remove('active');
         });
     }
@@ -255,17 +528,23 @@ function initAnniversaryModule() {
         annBgInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            if (!activeAnnId) { showNotification('请先选择一个纪念日', 'warning'); return; }
+            if (!activeAnnId) {
+                showNotification('请先选择一个纪念日', 'warning');
+                return;
+            }
             const reader = new FileReader();
             reader.onload = async (ev) => {
                 const dataUrl = ev.target.result;
                 const bgEl = document.getElementById('ann-header-card-bg');
                 if (bgEl) bgEl.style.backgroundImage = `url(${dataUrl})`;
                 await localforage.setItem(getStorageKey(`annHeaderBg_${activeAnnId}`), dataUrl);
-                showNotification('封面图已更新 ', 'success');
+                showNotification('封面图已更新', 'success');
             };
             reader.readAsDataURL(file);
             e.target.value = '';
         });
     }
+
+    // 启动检测系统
+    initSpecialDaySystem();
 }

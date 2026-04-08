@@ -165,6 +165,7 @@
         var(--accent-color),
         rgba(var(--accent-color-rgb,224,105,138),.55));
     transition: width .8s cubic-bezier(.4,0,.2,1);
+     min-width: 2px; /* 👈 新增这行，确保哪怕只有 0.1% 也能看到一条线 */
 }
 .dm3-stats-row {
     display: grid;

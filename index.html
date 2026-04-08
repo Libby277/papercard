@@ -2043,6 +2043,12 @@
 
     <div class="modal" id="anniversary-modal">
         <div class="modal-content">
+            <!-- 右上角设置按钮 
+            <div style="position:absolute; top:12px; right:12px; z-index:10;">
+                <button onclick="openSpecialDaySettings()" title="特殊日子通知设置" style="background:none;border:none;color:var(--text-secondary);font-size:18px;cursor:pointer;padding:5px;"><i class="fas fa-cog"></i></button>
+            </div>-->
+            
+            <!-- 顶部展示卡片 -->
             <div class="ann-header-card" id="ann-header-card" style="display: none;">
                 <div class="ann-header-card-bg" id="ann-header-card-bg"></div>
                 <div class="ann-header-card-overlay" id="ann-header-card-overlay"></div>
@@ -2050,12 +2056,13 @@
                 <div class="ann-header-card-inner">
                     <span class="ann-header-icon" id="ann-header-icon">❤︎</span>
                     <span class="ann-header-label" id="ann-header-label">ANNIVERSARY</span>
-                    <div class="ann-header-title" id="ann-header-title">纪念日</div>
+                    <div class="ann-header-title" id="ann-header-title">重要日</div>
                     <div class="ann-header-days" id="ann-header-days">0<span class="ann-header-days-unit">天</span></div>
                     <div class="ann-header-date" id="ann-header-date">--/--</div>
                     <div class="ann-header-milestones" id="ann-header-milestones"></div>
                 </div>
             </div>
+
             <div id="ann-card-toolbar" style="display:none; padding:6px 14px 2px; align-items:center; justify-content:flex-end; gap:8px;">
                 <button class="ann-header-upload-btn" onclick="document.getElementById('ann-header-bg-input').click()" title="更换背景图" style="position:static; background:rgba(var(--accent-color-rgb),0.1); border-color:rgba(var(--accent-color-rgb),0.3); color:var(--accent-color);">
                     <i class="fas fa-image"></i> 更换封面
@@ -2064,21 +2071,22 @@
                     <i class="fas fa-times"></i> 清除
                 </button>
             </div>
-    
+
             <div class="ann-list-container" id="ann-list-container">
             </div>
-    
+
             <div class="ann-footer">
                 <button class="modal-btn modal-btn-secondary" id="close-anniversary-modal">关闭</button>
                 <button class="modal-btn modal-btn-primary" id="open-ann-add-btn" style="flex: 1;">
-                    <i class="fas fa-plus"></i> 新增纪念日
+                    <i class="fas fa-plus"></i> 新增重要日
                 </button>
             </div>
-    
+
+            <!-- 编辑面板 -->
             <div class="ann-editor-slide" id="ann-editor-slide">
                 <div class="ann-editor-header">
                     <button class="ann-back-btn" id="close-ann-editor"><i class="fas fa-arrow-left"></i></button>
-                    <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><path d="M12 5v14M5 12h14"/></svg> 添加纪念日</span>
+                    <span id="ann-editor-title">添加重要日</span>
                 </div>
                 
                 <div class="ann-editor-content">
@@ -2086,31 +2094,105 @@
                         <label class="ann-label"><i class="fas fa-tag"></i>标题名称</label>
                         <input type="text" class="modal-input" id="ann-input-name" placeholder="例如：恋爱纪念日、梦角生日">
                     </div>
-    
+
                     <div class="ann-form-group">
                         <label class="ann-label"><i class="fas fa-calendar-alt"></i>选择日期</label>
                         <input type="date" class="modal-input" id="ann-input-date">
                     </div>
-    
+
                     <div class="ann-form-group">
                         <label class="ann-label"><i class="fas fa-th-large"></i>类型</label>
                         <div class="ann-type-selector">
-                            <div class="ann-type-btn active" data-type="anniversary" onclick="switchAnnType('anniversary')">
+                            <!-- 注意：这里将 switchAnnType 改为了 selectAnnType，与JS匹配 -->
+                            <div class="ann-type-btn active" data-type="anniversary" onclick="selectAnnType('anniversary')">
                                 <i class="fas fa-heart"></i>
                                 <span>纪念日</span>
                                 <span class="ann-type-hint">过去 → 今天</span>
                             </div>
-                            <div class="ann-type-btn" data-type="countdown" onclick="switchAnnType('countdown')">
+                            <div class="ann-type-btn" data-type="countdown" onclick="selectAnnType('countdown')">
                                 <i class="fas fa-hourglass-half"></i>
                                 <span>倒数日</span>
                                 <span class="ann-type-hint">今天 → 未来</span>
+                            </div>
+                            <div class="ann-type-btn" data-type="birthday" onclick="selectAnnType('birthday')">
+                                <i class="fas fa-birthday-cake"></i>
+                                <span>生日</span>
+                                <span class="ann-type-hint">每年循环触发</span>
                             </div>
                         </div>
                         <div style="font-size: 12px; color: var(--text-secondary); margin-top: 10px; opacity: 0.7; padding: 0 2px;">
                             <span id="ann-type-desc">计算从过去某一天到现在已经过了多少天</span>
                         </div>
                     </div>
-    
+
+                    <!-- 🆕 新增：提醒设置 -->
+                    <div class="ann-form-group" id="ann-reminder-settings-group">
+                        <label class="ann-label"><i class="fas fa-bell"></i> 提醒设置</label>
+                        <div id="ann-reminder-options" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                            <!-- 纪念日专属选项 -->
+                            <div id="ann-opt-anniversary">
+                                <label style="font-size:13px; display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                    <input type="checkbox" id="ann-opt-100" value="100" class="ann-reminder-checkbox" style="accent-color:var(--accent-color); width:15px; height:15px;">
+                                    每 100 天提醒一次
+                                </label>
+                                <label style="font-size:13px; display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:4px;">
+                                    <input type="checkbox" id="ann-opt-1000" value="1000" class="ann-reminder-checkbox" style="accent-color:var(--accent-color); width:15px; height:15px;">
+                                    每 1000 天提醒一次
+                                </label>
+                                
+                                <!-- 自定义天数 -->
+                                <div style="margin-top:6px; font-size:13px;">
+                                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                        <input type="checkbox" id="ann-opt-custom-check" class="ann-reminder-checkbox" style="accent-color:var(--accent-color); width:15px; height:15px;">
+                                        自定义天数提醒
+                                    </label>
+                                    <textarea id="ann-opt-custom-days" placeholder="输入具体天数（多个用英文逗号或换行隔开）&#10;例如：222, 520, 1314" style="width:100%; height:60px; margin-top:4px; padding:5px; font-size:12px; border:1px solid var(--border-color); border-radius:6px; box-sizing:border-box; background:var(--primary-bg); color:var(--text-primary);"></textarea>
+                                </div>
+
+                                <!-- 🆕 新增：间隔年提醒 -->
+                                <div style="display:flex; align-items:center; gap:8px; margin-top:6px; font-size:13px;">
+                                    <input type="checkbox" id="ann-opt-yearly-interval-check" class="ann-reminder-checkbox" style="flex-shrink:0; accent-color:var(--accent-color); width:15px; height:15px;">
+                                    <div style="display:flex; align-items:center; gap:4px; flex:1;">
+                                        每隔
+                                        <input type="number" id="ann-opt-yearly-interval-val" placeholder="1" style="width:60px; padding:2px 5px; font-size:12px; border:1px solid var(--border-color); border-radius:4px; background:var(--primary-bg); color:var(--text-primary);">
+                                        年提醒一次
+                                    </div>
+                                </div>
+                            </div>
+
+                            
+                            <!-- 生日专属选项 -->
+                            <div id="ann-opt-birthday" style="display:none;">
+                                <label style="font-size:13px; display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                    <input type="checkbox" id="ann-opt-yearly" value="yearly" class="ann-reminder-checkbox" style="accent-color:var(--accent-color); width:15px; height:15px;">
+                                    每年生日提醒
+                                </label>
+                                <label style="font-size:13px; display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:4px;">
+                                    <input type="checkbox" id="ann-opt-decade" value="decade" class="ann-reminder-checkbox" style="accent-color:var(--accent-color); width:15px; height:15px;">
+                                    每 10 年提醒一次
+                                </label>
+                                
+                                <!-- 新增：自定义间隔 -->
+                                <div style="display:flex; align-items:center; gap:8px; margin-top:6px; font-size:13px;">
+                                    <input type="checkbox" id="ann-opt-interval-check" class="ann-reminder-checkbox" style="flex-shrink:0; accent-color:var(--accent-color); width:15px; height:15px;">
+                                    <div style="display:flex; align-items:center; gap:4px; flex:1;">
+                                        每隔
+                                        <input type="number" id="ann-opt-interval-years" placeholder="5" style="width:60px; padding:2px 5px; font-size:12px; border:1px solid var(--border-color); border-radius:4px; background:var(--primary-bg); color:var(--text-primary);">
+                                        年提醒一次
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 🆕 新增：通知文案 -->
+                    <div class="ann-form-group">
+                        <label class="ann-label"><i class="fas fa-comment-dots"></i> 通知文案</label>
+                        <!-- 修改 placeholder 提示用户 -->
+                        <textarea id="ann-custom-message" class="modal-input" rows="4" placeholder="每行写一段话，到时会随机抽取一条展示&#10;" style="resize:vertical; font-family:var(--font-family);"></textarea>
+                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; opacity: 0.7;">此文案将显示在当日通知和公告中</div>
+                    </div>
+
                     <button class="modal-btn modal-btn-primary" id="save-ann-btn" style="width: 100%; margin-top: 10px;">
                         <i class="fas fa-check"></i> 保存
                     </button>
@@ -2118,6 +2200,7 @@
             </div>
         </div>
     </div>
+
 
     <div class="anniversary-animation" id="anniversary-animation">
         <div class="anniversary-animation-content">

@@ -212,9 +212,6 @@ function _renderModernToolbar() {
     let groupFilterHtml = '';
     if (isMainCustom && customReplyGroups && customReplyGroups.length > 0) {
         const allCount = customReplies.length;
-        /*const ungroupedCount = customReplies.filter(item =>
-            !customReplyGroups.some(g => g.items && g.items.includes(item))
-        ).length;*/
         // ✨ 性能优化：用 Set 代替嵌套的 some + includes
         const groupedTexts = new Set();
         if (customReplyGroups) customReplyGroups.forEach(g => (g.items || []).forEach(t => groupedTexts.add(t)));
@@ -554,7 +551,7 @@ function _renderCardViewWithGroups(list, items) {
 }
 
 
-function _renderGroupBlock(list, group, groupItems, disabledSet, isUngrouped = false) {
+/*function _renderGroupBlock(list, group, groupItems, disabledSet, isUngrouped = false) {
     const section = document.createElement('div');
     section.className = 'rl-group-block';
     const isCollapsed = group._collapsed || false;
@@ -564,12 +561,14 @@ function _renderGroupBlock(list, group, groupItems, disabledSet, isUngrouped = f
     section.innerHTML = `
         <style>
             .rl-group-block { margin-bottom:12px; }
-            .rl-group-header {
+            rl-group-header {
                 display:flex;align-items:center;gap:9px;padding:9px 14px;
-                border-radius:12px 12px ${isCollapsed ? '12px 12px' : '0 0'};
+                border-radius:12px 12px 0 0;
                 background:var(--secondary-bg);cursor:pointer;user-select:none;
                 transition:background 0.2s;
-                ${isDisabled ? 'opacity:0.5;' : ''}
+            }
+            .rl-group-header.collapsed {
+                border-radius:12px;
             }
             .rl-group-header:hover { background:rgba(var(--accent-color-rgb,180,140,100),0.06); }
             .rl-group-body { border:1px solid var(--border-color);border-top:none;border-radius:0 0 12px 12px;padding:6px 8px 8px;background:var(--primary-bg); }
@@ -633,7 +632,137 @@ function _renderGroupBlock(list, group, groupItems, disabledSet, isUngrouped = f
         e.stopPropagation();
         _showGroupEditor(group);
     });
+}*/
+function _renderGroupBlock(list, group, groupItems, disabledSet, isUngrouped = false) {
+  const section = document.createElement('div');
+  section.className = 'rl-group-block';
+  const isCollapsed = group._collapsed || false;
+  const isDisabled = group.disabled;
+  const colorDot = group.color || '#868E96';
+  
+  section.innerHTML = `
+  <style>
+    .rl-group-block { margin-bottom:12px; }
+    .rl-group-header {
+      display:flex;align-items:center;gap:9px;padding:9px 14px;
+      border-radius:12px 12px 0 0;
+      background:var(--secondary-bg);cursor:pointer;user-select:none;
+      transition:background 0.2s, border-radius 0.3s ease;
+    }
+    .rl-group-header.collapsed { border-radius:12px; }
+    .rl-group-header:hover { background:rgba(var(--accent-color-rgb,180,140,100),0.06); }
+    .rl-group-body {
+      border:1px solid var(--border-color);border-top:none;
+      border-radius:0 0 12px 12px;padding:6px 8px 8px;
+      background:var(--primary-bg);
+    }
+    .rl-group-tag {
+      display:inline-flex;align-items:center;gap:5px;
+      padding:2px 9px 2px 6px;border-radius:20px;
+      border:1.5px solid ${colorDot}30;background:${colorDot}15;
+      cursor:pointer;transition:all 0.15s;
+    }
+    .rl-group-tag:hover { background:${colorDot}30; }
+    .grp-select-all-btn {
+      margin-left:auto;flex-shrink:0;padding:3px 9px;border-radius:20px;
+      cursor:pointer;font-size:11px;font-weight:700;font-family:var(--font-family);
+      transition:all 0.15s;
+      border:1.5px solid var(--border-color);background:var(--primary-bg);
+      color:var(--text-secondary);
+    }
+    .grp-select-all-btn:hover { filter:brightness(0.95); }
+    .grp-edit-btn {
+      margin-left:auto;width:26px;height:26px;border-radius:8px;
+      border:1px solid var(--border-color);background:var(--primary-bg);
+      color:var(--text-secondary);cursor:pointer;
+      display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    }
+    .grp-chevron {
+      color:var(--text-secondary);transition:transform 0.2s;
+    }
+  </style>
+    <div class="rl-group-header${isCollapsed ? ' collapsed' : ''}" id="grp-hdr-${group.id}" style="${isDisabled ? 'opacity:0.5;' : ''}">
+      <div class="rl-group-tag" id="grp-tag-${group.id}" title="${isDisabled ? '点击启用此分组' : '点击屏蔽此分组'}">
+        <span style="width:8px;height:8px;border-radius:50%;background:${colorDot};flex-shrink:0;"></span>
+        <span style="font-size:12px;font-weight:700;color:${colorDot};">${group.name}</span>
+        ${isDisabled ? `<span title="已屏蔽" style="color:${colorDot};">${ICONS.eyeOff}</span>` : ''}
+      </div>
+      <span style="font-size:11px;color:var(--text-secondary);">${groupItems.length} 条</span>
+      ${_batchModeActive && groupItems.length > 0 ? (() => {
+        const allSel = groupItems.every(x => _batchSelectedIndices.has(x.idx));
+        const someSel = !allSel && groupItems.some(x => _batchSelectedIndices.has(x.idx));
+        return `<button class="grp-select-all-btn" data-gid="${group.id}" title="${allSel ? '取消本组全选' : '全选本组'}" style="
+          margin-left:auto;flex-shrink:0;padding:3px 9px;border-radius:20px;cursor:pointer;
+          font-size:11px;font-weight:700;font-family:var(--font-family);transition:all 0.15s;
+          border:1.5px solid ${allSel ? 'var(--accent-color)' : someSel ? colorDot : 'var(--border-color)'};
+          background:${allSel ? 'var(--accent-color)' : someSel ? colorDot + '22' : 'var(--primary-bg)'};
+          color:${allSel ? '#fff' : someSel ? colorDot : 'var(--text-secondary)'};
+        ">${allSel ? '✓ 全选' : someSel ? `已选${groupItems.filter(x=>_batchSelectedIndices.has(x.idx)).length}` : '全选'}</button>`;
+      })() : `<div style="flex:1;"></div>`}
+      ${!isUngrouped ? `
+        <button class="grp-edit-btn" title="编辑分组" style="
+          ${_batchModeActive ? '' : 'margin-left:auto;'}width:26px;height:26px;border-radius:8px;border:1px solid var(--border-color);
+          background:var(--primary-bg);color:var(--text-secondary);cursor:pointer;
+          display:flex;align-items:center;justify-content:center;flex-shrink:0;
+        ">${ICONS.edit}</button>` : ''}
+      <div class="grp-chevron" style="color:var(--text-secondary);transition:transform 0.2s;transform:${isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'};">
+        ${ICONS.chevronD}
+      </div>
+    </div>
+    <div class="rl-group-body" id="grp-body-${group.id}" style="display:${isCollapsed ? 'none' : 'block'};">
+    </div>
+  `;
+
+  list.appendChild(section);
+
+  const body = section.querySelector(`#grp-body-${group.id}`);
+  if (groupItems.length === 0) {
+    body.innerHTML = `<div style="padding:18px;text-align:center;font-size:12px;color:var(--text-secondary);opacity:0.6;">此分组暂无内容</div>`;
+  } else {
+    _renderCardList(body, groupItems, disabledSet);
+  }
+
+  // 绑定“组内全选”按钮事件
+  section.querySelector('.grp-select-all-btn')?.addEventListener('click', e => {
+    e.stopPropagation();
+    const allSel = groupItems.every(x => _batchSelectedIndices.has(x.idx));
+    if (allSel) {
+      groupItems.forEach(x => _batchSelectedIndices.delete(x.idx));
+    } else {
+      groupItems.forEach(x => _batchSelectedIndices.add(x.idx));
+    }
+    renderReplyLibrary();
+  });
+
+  // 绑定折叠/展开事件
+  section.querySelector(`#grp-hdr-${group.id}`).addEventListener('click', e => {
+    if (e.target.closest('.grp-edit-btn') || e.target.closest(`#grp-tag-${group.id}`) || e.target.closest('.grp-select-all-btn')) return;
+    group._collapsed = !group._collapsed;
+    body.style.display = group._collapsed ? 'none' : 'block';
+    section.querySelector('.grp-chevron').style.transform = group._collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+    // 使用 class 控制圆角，比写死内联 style 更优雅
+    section.querySelector('.rl-group-header').classList.toggle('collapsed', !!group._collapsed);
+  });
+
+  // 绑定屏蔽/启用事件
+  const tag = section.querySelector(`#grp-tag-${group.id}`);
+  if (tag && !isUngrouped) {
+    tag.addEventListener('click', e => {
+      e.stopPropagation();
+      group.disabled = !group.disabled;
+      throttledSaveData();
+      renderReplyLibrary();
+      showNotification(group.disabled ? `已屏蔽「${group.name}」` : `已启用「${group.name}」`, 'success');
+    });
+  }
+
+  // 绑定编辑事件
+  section.querySelector('.grp-edit-btn')?.addEventListener('click', e => {
+    e.stopPropagation();
+    _showGroupEditor(group);
+  });
 }
+
 
 function _renderCardList(container, itemsWithIdx, disabledSet) {
     itemsWithIdx.forEach(({ text, idx }) => {
@@ -1571,7 +1700,14 @@ function _showImportUI(data) {
 
 function _showIOSheet(title, subtitle, modules, icon, onConfirm, showMode = false) {
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.6);backdrop-filter:blur(10px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s ease;';
+    //overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.6);backdrop-filter:blur(10px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s ease;';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.6);backdrop-filter:blur(10px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s ease; touch-action:none; overscroll-behavior:contain;';
+
+        // ✨ 添加：锁定 body 并防止背景滑动
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        const preventScroll = (e) => { if(e.target === overlay) e.preventDefault(); };
+        overlay.addEventListener('touchmove', preventScroll, { passive: false });
 
     let modeVal = 'merge';
 
@@ -1667,7 +1803,16 @@ function _showIOSheet(title, subtitle, modules, icon, onConfirm, showMode = fals
         };
     });
 
-    const close = () => { overlay.style.animation = 'fadeOut 0.15s ease forwards'; setTimeout(() => overlay.remove(), 150); };
+   // const close = () => { overlay.style.animation = 'fadeOut 0.15s ease forwards'; setTimeout(() => overlay.remove(), 150); };
+    const close = () => {
+        overlay.style.animation = 'fadeOut 0.15s ease forwards';
+        setTimeout(() => {
+            // ✨ 添加：恢复 body 滚动和移除监听
+            document.body.style.overflow = originalOverflow;
+            overlay.removeEventListener('touchmove', preventScroll);
+            overlay.remove();
+        }, 150);
+    };
     overlay.querySelector('#_io_close').onclick = close;
     overlay.querySelector('#_io_cancel').onclick = close;
     overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
@@ -1680,11 +1825,40 @@ function _showIOSheet(title, subtitle, modules, icon, onConfirm, showMode = fals
     };
 }
 
-function _makeOverlay() {
+/*function _makeOverlay() {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;';
     return overlay;
+}*/
+function _makeOverlay() {
+    const overlay = document.createElement('div');
+    
+    // ✨ 关键 CSS：禁止 touch-action 和 防止滚动穿透
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center; touch-action:none; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;';
+
+    // 锁死 body 滚动
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    // 监听 touchmove 并阻止默认行为，防止 iOS 橡皮筋效果
+    const preventScroll = (e) => {
+        if (e.target === overlay) { // 仅阻止背景层的滑动，不阻止弹窗内容内部滑动
+             e.preventDefault();
+        }
+    };
+    overlay.addEventListener('touchmove', preventScroll, { passive: false });
+
+    // 增强 remove 方法，恢复 body 滚动并移除监听
+    const originalRemove = overlay.remove.bind(overlay);
+    overlay.remove = function() {
+        document.body.style.overflow = originalOverflow;
+        overlay.removeEventListener('touchmove', preventScroll);
+        originalRemove();
+    };
+
+    return overlay;
 }
+
 
 /*function _showBatchAddDialog() {
     const overlay = _makeOverlay();
@@ -1845,7 +2019,7 @@ function _showBatchAddDialog() {
 }
 
 
-function initReplyLibraryListeners() {
+/*function initReplyLibraryListeners() {
     const entryBtn = document.getElementById('custom-replies-function');
     if (entryBtn) {
         entryBtn.addEventListener('click', () => {
@@ -1871,6 +2045,7 @@ function initReplyLibraryListeners() {
             btn.classList.add('active');
             currentMajorTab = btn.dataset.major;
 
+
             if (currentMajorTab === 'announcement') return;
 
             const listArea = document.getElementById('custom-replies-list');
@@ -1894,6 +2069,72 @@ function initReplyLibraryListeners() {
             _activeGroupFilter = null;
             currentSubTab = LIBRARY_CONFIG[currentMajorTab].tabs[0].id;
             renderReplyLibrary();
+        });
+    });*/
+    function initReplyLibraryListeners() {
+    const entryBtn = document.getElementById('custom-replies-function');
+    if (entryBtn) {
+        entryBtn.addEventListener('click', () => {
+            hideModal(DOMElements.advancedModal.modal);
+            currentMajorTab = 'reply';
+            currentSubTab = 'custom';
+            _batchModeActive = false;
+            _batchSelectedIndices.clear();
+            _searchVisible = false;
+            _searchQuery = '';
+            _activeGroupFilter = null;
+            document.querySelectorAll('.sidebar-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.major === 'reply');
+            });
+            renderReplyLibrary();
+            showModal(DOMElements.customRepliesModal.modal);
+        });
+    }
+
+    document.querySelectorAll('.sidebar-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentMajorTab = btn.dataset.major;
+
+            // 获取页面元素引用
+            const listArea = document.getElementById('custom-replies-list');
+            const annPanel = document.getElementById('announcement-panel');
+            const crToolbar = document.getElementById('cr-toolbar');
+            const subTabs = document.getElementById('cr-sub-tabs');
+            const addBtn = document.getElementById('add-custom-reply');
+            const dynamicToolbar = document.getElementById('batch-ops-toolbar'); // 动态生成的工具栏
+            const titleEl = document.getElementById('cr-modal-title');
+
+            // ✨ 关键修复：区分处理公告和其他模块
+            if (currentMajorTab === 'announcement') {
+                // 如果是公告页面：
+                if (listArea) listArea.style.display = 'none';
+                if (annPanel) annPanel.style.display = 'block'; // 显示公告
+                if (crToolbar) crToolbar.style.display = 'none';
+                if (dynamicToolbar) dynamicToolbar.style.display = 'none';
+                if (subTabs) subTabs.style.display = 'none';
+                if (addBtn) addBtn.style.display = 'none';
+                if (titleEl) titleEl.textContent = '公告管理';
+                // 不调用 renderReplyLibrary，因为公告有独立渲染逻辑
+            } else {
+                // 如果是字卡/氛围等其他页面：
+                if (listArea) listArea.style.display = '';
+                if (annPanel) annPanel.style.display = 'none'; // 隐藏公告
+                if (crToolbar) crToolbar.style.display = '';
+                if (subTabs) subTabs.style.display = '';
+                if (addBtn) addBtn.style.display = currentSubTab === 'period' ? 'none' : '';
+                
+                // 重置状态
+                _batchModeActive = false;
+                _batchSelectedIndices.clear();
+                _searchVisible = false;
+                _searchQuery = '';
+                _activeGroupFilter = null;
+                currentSubTab = LIBRARY_CONFIG[currentMajorTab].tabs[0].id;
+                
+                renderReplyLibrary();
+            }
         });
     });
 

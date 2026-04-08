@@ -2,6 +2,20 @@
  * features/theme-editor.js - 主题编辑器 Theme Editor
  * 主题方案管理与头像形状设置
  */
+// 把任意 CSS 颜色转成 "r, g, b" 字符串
+function colorToRgbString(cssColor) {
+  if (!cssColor) return null;
+  const temp = document.createElement('div');
+  temp.style.color = cssColor;
+  document.body.appendChild(temp);
+  const computed = getComputedStyle(temp).color;
+  document.body.removeChild(temp);
+  const match = computed.match(/\d+/g);
+  if (match && match.length >= 3) {
+    return `${match[0]}, ${match[1]}, ${match[2]}`;
+  }
+  return null;
+}
 
 function applyAvatarShapeToDOM(type, shape) {
             const SHAPES = ['circle','square'];
@@ -287,9 +301,21 @@ function initThemeEditor() {
                 item.className = 'color-picker-item';
                 item.innerHTML = `<label for="color-${variable.replace(/--/g,'')}">${label}</label><input type="color" id="color-${variable.replace(/--/g,'')}" data-variable="${variable}" value="${colorValue}">`;
                 grid.appendChild(item);
-                item.querySelector('input[type="color"]').addEventListener('input', (e) => {
+                /*item.querySelector('input[type="color"]').addEventListener('input', (e) => {
                     document.documentElement.style.setProperty(e.target.dataset.variable, e.target.value);
+                });*/
+                item.querySelector('input[type="color"]').addEventListener('input', (e) => {
+                const varName = e.target.dataset.variable;
+                document.documentElement.style.setProperty(varName, e.target.value);
+                // 同步 RGB 变量
+                if (varName === '--message-received-text' || varName === '--message-sent-text') {
+                    const rgb = colorToRgbString(e.target.value);
+                    if (rgb) {
+                    document.documentElement.style.setProperty(varName + '-rgb', rgb);
+                    }
+                }
                 });
+
             }
 
             const extraHeading = document.createElement('div');
@@ -354,7 +380,7 @@ function initThemeEditor() {
             grid.appendChild(previewBox);
         }
 
-        function applyTheme(colors, isReset = false) {
+        /*function applyTheme(colors, isReset = false) {
             if (isReset) {
                 for (const variable of Object.keys(themeColorMappings)) {
                     document.documentElement.style.removeProperty(variable);
@@ -365,7 +391,30 @@ function initThemeEditor() {
             for (const [variable, color] of Object.entries(colors)) {
                 document.documentElement.style.setProperty(variable, color);
             }
+        }*/
+        function applyTheme(colors, isReset = false) {
+            if (isReset) {
+                for (const variable of Object.keys(themeColorMappings)) {
+                document.documentElement.style.removeProperty(variable);
+                }
+                // 重置时也清掉 RGB 变量
+                document.documentElement.style.removeProperty('--message-received-text-rgb');
+                document.documentElement.style.removeProperty('--message-sent-text-rgb');
+                return;
+            }
+            if (!colors) return;
+            for (const [variable, color] of Object.entries(colors)) {
+                document.documentElement.style.setProperty(variable, color);
+                // 同步 RGB 变量
+                if (variable === '--message-received-text' || variable === '--message-sent-text') {
+                const rgb = colorToRgbString(color);
+                if (rgb) {
+                    document.documentElement.style.setProperty(variable + '-rgb', rgb);
+                }
+                }
+            }
         }
+
         
         function saveCurrentThemeAsPreset() {
             const presetName = prompt("请输入新主题方案的名称：");
@@ -527,7 +576,7 @@ function populateThemeSelector() {
             settings.inChatAvatarSize = scheme.inChatAvatarSize;
             
             const root = document.documentElement;
-            if (scheme.customColors && Object.keys(scheme.customColors).length > 0) {
+            /*if (scheme.customColors && Object.keys(scheme.customColors).length > 0) {
                 Object.entries(scheme.customColors).forEach(([v, c]) => {
                     root.style.setProperty(v, c);
                 });
@@ -535,7 +584,37 @@ function populateThemeSelector() {
                 if (themeColorMappings) {
                     Object.keys(themeColorMappings).forEach(v => root.style.removeProperty(v));
                 }
+            }*/
+           
+            if (scheme.customColors && Object.keys(scheme.customColors).length > 0) {
+                Object.entries(scheme.customColors).forEach(([v, c]) => {
+                        root.style.setProperty(v, c);
+                        // 同步 RGB 变量
+                        if (v === '--message-received-text' || v === '--message-sent-text') {
+                        const rgb = colorToRgbString(c);
+                        if (rgb) {
+                            root.style.setProperty(v + '-rgb', rgb);
+                        }
+                    }
+                });
+                } else {
+                if (themeColorMappings) {
+                    Object.keys(themeColorMappings).forEach(v => root.style.removeProperty(v));
+                }
+
+                // 没有自定义颜色时，也要同步默认的 RGB
+                const defaultReceived = getComputedStyle(root).getPropertyValue('--message-received-text').trim();
+                const defaultSent = getComputedStyle(root).getPropertyValue('--message-sent-text').trim();
+                if (defaultReceived) {
+                    const rgb1 = colorToRgbString(defaultReceived);
+                    if (rgb1) root.style.setProperty('--message-received-text-rgb', rgb1);
+                }
+                if (defaultSent) {
+                    const rgb2 = colorToRgbString(defaultSent);
+                    if (rgb2) root.style.setProperty('--message-sent-text-rgb', rgb2);
+                }
             }
+
             
             if (scheme.customFontUrl) {
                 try { applyCustomFont(scheme.customFontUrl); } catch(e) {}

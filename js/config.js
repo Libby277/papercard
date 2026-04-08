@@ -49,7 +49,9 @@
             // --- 外观主题 ---
             { id: 'savedBackgrounds', name: '背景图集', icon: 'fa-image', backup: true },
             { id: 'customThemes', name: '自定义主题', icon: 'fa-palette', backup: true },
-            { id: 'themeSchemes', name: '主题方案', icon: 'fa-swatchbook', backup: true }
+            { id: 'themeSchemes', name: '主题方案', icon: 'fa-swatchbook', backup: true },
+            { id: 'specialDayConfig', name: '特殊日子文案', icon: 'fa-bell', backup: true },
+
         ];
 
         // 辅助函数：获取变量值

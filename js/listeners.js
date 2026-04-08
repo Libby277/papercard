@@ -824,6 +824,7 @@ document.getElementById('chat-settings').addEventListener('click', () => {
                 document.documentElement.style.setProperty('--font-size',
                     `${settings.fontSize}px`);
                 fontSizeValue.textContent = `${settings.fontSize}px`;
+                renderMessages(true);
             });
 
             fontSizeSlider.addEventListener('change', throttledSaveData);

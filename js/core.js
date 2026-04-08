@@ -576,10 +576,26 @@ const saveData = async () => {
     }
   });
 
-    if (failed.length > 0) {
+    /*if (failed.length > 0) {
         showNotification('部分数据保存失败，请检查存储空间', 'error');
         // 如果你保留了 showSaveStatus 函数，可以在这里保留错误提示
         if (typeof showSaveStatus === 'function') showSaveStatus('error');
+    }*/
+   // core.js 的 saveData 末尾
+    if (failed.length > 0) {
+    // 过滤出真正是因为空间不足导致的失败
+    const quotaErrors = results.filter((r, i) => 
+        r.status === 'rejected' && 
+        r.reason && 
+        (r.reason.name === 'QuotaExceededError' || String(r.reason).includes('quota'))
+    );
+    
+    if (quotaErrors.length > 0) {
+        showNotification('存储空间不足，请导出备份并清理数据', 'error');
+    } else {
+        // 非空间问题不弹窗吓唬用户，只控制台记录
+        console.warn(`[saveData] ${failed.length} 项数据保存异常(非空间问题):`, failed);
+    }
     }
     
   _backupCriticalData();
@@ -880,37 +896,7 @@ function manageAutoSendTimer() {
             showNotification('背景图片已移除', 'success');
         };
 
-        /*window.scrollToQuotedMessage = function(el) {
-            const id = el.getAttribute('data-reply-id');
-            if (!id) return;
-            const tryScroll = () => {
-                const target = document.querySelector(`[data-msg-id="${id}"]`);
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    target.classList.add('msg-highlight');
-                    setTimeout(() => target.classList.remove('msg-highlight'), 1500);
-                    return true;
-                }
-                return false;
-            };
-            if (!tryScroll()) {
-                // Message not rendered yet - check if it exists in messages array
-                const msgIndex = messages.findIndex(m => String(m.id) === String(id));
-                if (msgIndex === -1) {
-                    if (typeof showNotification === 'function') showNotification('消息可能已被删除', 'info');
-                    return;
-                }
-                // Load enough messages to include this one
-                const needed = messages.length - msgIndex;
-                if (needed > displayedMessageCount) {
-                    displayedMessageCount = needed;
-                    renderMessages(false);
-                    setTimeout(tryScroll, 150);
-                } else {
-                    if (typeof showNotification === 'function') showNotification('消息可能已被删除', 'info');
-                }
-            }
-        };*/
+
         window.scrollToQuotedMessage = function(el) {
             const id = el.getAttribute('data-reply-id');
             if (!id) return;
@@ -1891,53 +1877,7 @@ function fallbackExport(dataStr, fileName) {
     showNotification('导出成功', 'success');
 }
 
-/*async function exportFullBackup() {
-    try {
-        showNotification('正在准备全量备份...', 'info', 2000);
 
-        // 1. 先强制保存一次内存中的变量到数据库
-        await saveData();
-
-        // 2. 获取所有键名
-        const allKeys = await localforage.keys();
-        const backupData = {};
-        let count = 0;
-
-        // 3. 过滤出属于本应用的数据，并全部读取
-        for (const key of allKeys) {
-            if (key.startsWith(APP_PREFIX)) {
-                const value = await localforage.getItem(key);
-                if (value !== null && value !== undefined) {
-                    backupData[key] = value;
-                    count++;
-                }
-            }
-        }
-
-        // 4. 构建导出文件对象
-        const exportObj = {
-            _meta: {
-                type: 'FULL_BACKUP_AUTO', 
-                version: '3.0-auto',
-                date: new Date().toISOString(),
-                appName: 'ChatApp'
-            },
-            data: backupData
-        };
-
-        const dataStr = JSON.stringify(exportObj, null, 2);
-        const fileName = `传讯-全量备份-${new Date().toLocaleDateString().replace(/\//g, '-')}.json`;
-
-        // ✅ 5. 直接调用浏览器下载，不再尝试系统分享
-        fallbackExport(dataStr, fileName);
-        
-        showNotification(`备份成功！共包含 ${count} 个数据项`, 'success');
-
-    } catch (error) {
-        console.error('全量备份失败:', error);
-        showNotification('备份失败: ' + error.message, 'error');
-    }
-}*/
 async function exportFullBackup() {
     try {
         // 先把内存中的数据写入 localforage，确保备份是最新的
@@ -1956,60 +1896,6 @@ async function exportFullBackup() {
 
 
 
-/**
- * 【智能导入】自动识别备份类型并恢复
- */
-/*async function importAnyBackup(file) {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        try {
-            const rawText = e.target.result;
-            const imported = JSON.parse(rawText);
-
-            // --- 情况 A：新格式的全自动全量备份 ---
-            if (imported._meta && imported._meta.type === 'FULL_BACKUP_AUTO' && imported.data) {
-                const count = Object.keys(imported.data).length;
-                
-                if (!confirm(`检测到【全量备份文件】，包含 ${count} 个数据项。\n\n⚠️ 警告：这将覆盖当前的所有数据！是否继续？`)) {
-                    return;
-                }
-
-                showNotification('正在恢复数据...', 'info');
-                
-                // 1. 清空当前数据库（为了干净恢复）
-                await localforage.clear();
-
-                // 2. 写入备份数据
-                for (const key in imported.data) {
-                    await localforage.setItem(key, imported.data[key]);
-                }
-
-                showNotification('恢复成功！页面即将刷新加载新数据', 'success');
-                
-                // 3. 刷新页面以加载新数据
-                setTimeout(() => window.location.reload(), 1500);
-            }
-            
-            // --- 情况 B：旧版本的选择性备份 ---
-            else if (imported.version || imported.messages || imported.settings) {
-                // 这里直接调用你原来的旧版导入逻辑
-                // 如果旧版逻辑叫 importChatHistory，可以直接把 file 传给它
-                // 但为了避免递归，我们把原逻辑移到这里（或者取个别名）
-                showNotification('检测到旧版备份，正在兼容恢复...', 'info');
-                handleLegacyImport(imported); // 调用下面的兼容处理函数
-            }
-            
-            else {
-                throw new Error('无法识别的文件格式');
-            }
-
-        } catch (error) {
-            console.error('导入失败:', error);
-            showNotification('文件格式错误或已损坏', 'error');
-        }
-    };
-    reader.readAsText(file);
-}*/
 async function importAnyBackup(file) {
     try {
         // 只读一次文件，用 ArrayBuffer 统一处理
@@ -2124,65 +2010,7 @@ async function handleLegacyImport(importedData) {
             return;
         }
 
-        /*overlay.innerHTML = `
-        <div style="background:var(--secondary-bg);border-radius:20px;padding:24px;width:88%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.4);animation:modalContentSlideIn 0.3s ease forwards;">
-            <div style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:16px;">选择要导入的内容</div>
-            <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:20px;max-height:50vh;overflow-y:auto;">
-                ${rows.join('')}
-            </div>
-            <div style="display:flex;gap:10px;">
-                <button id="_imp_cancel" style="flex:1;padding:11px;border:1px solid var(--border-color);border-radius:12px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
-                <button id="_imp_confirm" style="flex:2;padding:11px;border:none;border-radius:12px;background:var(--accent-color);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-family);">确认导入</button>
-            </div>
-        </div>`;
-        document.body.appendChild(overlay);
 
-        const closeDialog = () => overlay.remove();
-        overlay.onclick = (e) => { if(e.target === overlay) closeDialog(); };
-        document.getElementById('_imp_cancel').onclick = closeDialog;
-
-        document.getElementById('_imp_confirm').onclick = async function() {
-            closeDialog();
-            let reloadNeeded = false;
-
-            // 遍历注册表执行导入
-            window.APP_DATA_REGISTRY.forEach(reg => {
-                if (reg.isVirtual) return; // 虚拟组跳过
-
-                // 判断是否勾选
-                let isChecked = false;
-                if (reg.group) {
-                    // 如果属于组，检查组的勾选状态
-                    const groupCb = overlay.querySelector(`[data-imp-id="${reg.group}"]`);
-                    if (groupCb) isChecked = groupCb.checked;
-                } else {
-                    const cb = overlay.querySelector(`[data-imp-id="${reg.id}"]`);
-                    if (cb) isChecked = cb.checked;
-                }
-
-                if (isChecked && importedData[reg.id] !== undefined) {
-                    // 执行赋值或特殊处理
-                    if (reg.onImport) {
-                        reg.onImport(importedData[reg.id]);
-                    } else {
-                        _setRegVal(reg.id, importedData[reg.id]);
-                    }
-                    
-                    // 如果是设置或消息，标记可能需要刷新
-                    if (reg.id === 'messages' || reg.id === 'settings') reloadNeeded = true;
-                }
-            });
-
-            await saveData(); // 保存到数据库
-            
-            // 刷新界面
-            if (reloadNeeded) {
-                 // 尝试应用设置
-                 if (typeof updateUI === 'function') updateUI();
-                 if (typeof renderMessages === 'function') renderMessages();
-            }
-            showNotification('导入成功', 'success');
-        };*/
                 overlay.innerHTML = `
         <div style="background:var(--secondary-bg);border-radius:20px;padding:24px;width:88%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.4);animation:modalContentSlideIn 0.3s ease forwards;">
             <div style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:16px;">选择要导入的内容</div>

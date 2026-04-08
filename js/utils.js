@@ -255,7 +255,7 @@ function applyGlobalThemeCss(cssCode) {
     styleTag.textContent = cssCode;
 }
 // 在 utils.js 中添加
-async function checkStorageSpace() {
+/*async function checkStorageSpace() {
     if (navigator.storage && navigator.storage.estimate) {
         const estimate = await navigator.storage.estimate();
         const percentUsed = (estimate.usage / estimate.quota) * 100;
@@ -270,7 +270,41 @@ async function checkStorageSpace() {
         return estimate;
     }
     return null;
+}*/
+// 替换原来的 checkStorageSpace 函数
+async function checkStorageSpace() {
+  if (!navigator.storage || !navigator.storage.estimate) return null;
+  
+  const estimate = await navigator.storage.estimate();
+  const quota = estimate.quota || 0;
+  
+  // 只计算本应用 localforage 实际占用的体积，排除浏览器缓存等干扰
+  let appUsage = 0;
+  try {
+    const keys = await localforage.keys();
+    for (const key of keys) {
+      const raw = await localforage.getItem(key);
+      const str = typeof raw === 'string' ? raw : JSON.stringify(raw);
+      appUsage += new Blob([str]).size;
+    }
+  } catch(e) {}
+
+  // 加上 localStorage 的体积
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i) || '';
+    const v = localStorage.getItem(k) || '';
+    appUsage += (k.length + v.length) * 2;
+  }
+
+  const percentUsed = quota > 0 ? (appUsage / quota) * 100 : 0;
+  
+  // 提高阈值，因为之前算的是全局，实际应用数据占比通常很小
+  if (percentUsed > 95) {
+    showNotification('应用数据存储即将满载，建议导出备份', 'warning', 10000);
+  }
+  return estimate;
 }
+
 
 // 在应用启动时检查
 window.addEventListener('load', () => {

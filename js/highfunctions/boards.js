@@ -503,6 +503,7 @@ async function deleteThread(id, type) {
 }
 
 function exportTxt(type) {
+  if (!confirm('确定要导出留言记录为 TXT 文件吗？')) return;
   const threads = type === 'me' ? boardData.myThreads : boardData.partnerThreads;
   if (threads.length === 0) { if(typeof showNotification === 'function') showNotification('没有可导出的内容', 'info'); return; }
   const myName = (typeof settings !== 'undefined' && settings.myName) || '我';

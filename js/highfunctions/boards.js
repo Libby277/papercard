@@ -29,18 +29,94 @@ function getUniqueShuffled(arr, count) {
   return unique;
 }
 
-// --- 数据存取与初始化隔离 ---
 async function loadData() {
-  try {
-    const saved = await localforage.getItem(STORAGE_KEY);
-    if (saved) boardData = { ...boardData, ...saved };
-    if (boardData.boardReplyPool.length === 0 && typeof customReplies !== 'undefined' && customReplies.length > 0) {
-      boardData.boardReplyPool = JSON.parse(JSON.stringify(customReplies));
-      await saveData();
+    try {
+        const saved = await localforage.getItem(STORAGE_KEY);
+        if (saved) boardData = { ...boardData, ...saved };
+        
+        // === 核心修复：精准吞噬老版 board.js 的 outbox/inbox 数据 ===
+        if (boardData.myThreads.length === 0 && boardData.partnerThreads.length === 0) {
+            const count = await migrateOldBoardData();
+            if (count > 0 && typeof showNotification === 'function') {
+                showNotification(`已完美恢复 ${count} 条老留言记录`, 'success', 4000);
+            }
+        }
+
+        if (boardData.boardReplyPool.length === 0 && typeof customReplies !== 'undefined' && customReplies.length > 0) {
+            boardData.boardReplyPool = JSON.parse(JSON.stringify(customReplies));
+            await saveData();
+        }
+        window.boardDataV2 = boardData;
+    } catch(e) {
+        console.warn('BoardV2 load error', e);
     }
-    window.boardDataV2 = boardData;
-  } catch(e) { console.warn('BoardV2 load error', e); }
 }
+
+// === 专门针对老版 board.js 的无损迁移函数 ===
+async function migrateOldBoardData() {
+    try {
+        // 1. 在 localforage 里捞出带有 envelopeData 的老键
+        const keys = await localforage.keys();
+        const oldKey = keys.find(k => k.includes('envelopeData'));
+        if (!oldKey) return 0;
+
+        const oldData = await localforage.getItem(oldKey);
+        if (!oldData) return 0;
+
+        const outbox = (oldData.outbox || []).filter(l => l.content); // 过滤掉空内容
+        const inbox = oldData.inbox || [];
+        if (outbox.length === 0) return 0;
+
+        console.log(`[BoardV2] 扫描到老版留言：${outbox.length} 条发件，${inbox.length} 条回复，开始拼接...`);
+
+        // 2. 把老版的信件，1对1 拼成新版的“对话线程”
+        outbox.forEach(letter => {
+            const newThread = {
+                id: letter.id || genId(),
+                starter: 'me',
+                createdAt: letter.sentTime || Date.now(),
+                replies: [{
+                    id: 'old_m_' + (letter.id || genId()),
+                    sender: 'me',
+                    text: letter.content,
+                    image: null,
+                    sticker: null,
+                    timestamp: letter.sentTime || Date.now()
+                }]
+            };
+
+            // 找到这封信对应的回复 (通过 refId 匹配)
+            const matchedReply = inbox.find(r => r.refId === letter.id);
+            if (matchedReply) {
+                newThread.replies.push({
+                    id: 'old_p_' + (matchedReply.id || genId()),
+                    sender: 'partner',
+                    text: matchedReply.content,
+                    image: null,
+                    sticker: null,
+                    timestamp: matchedReply.receivedTime || Date.now()
+                });
+                // 如果老版标记了 isNew，新版也加上未读星星
+                if (matchedReply.isNew) {
+                    newThread.unread = true;
+                }
+            } else if (letter.status === 'pending' && letter.replyTime) {
+                // 如果老版还在等回复，把老版的倒计时直接接过来
+                newThread.expectedReplyTime = letter.replyTime;
+            }
+
+            boardData.myThreads.push(newThread);
+        });
+
+        // 3. 存入新版数据库
+        await saveData();
+        return outbox.length;
+    } catch (e) {
+        console.error('[BoardV2] 老版数据迁移出错:', e);
+        return 0;
+    }
+}
+
 async function saveData() { try { await localforage.setItem(STORAGE_KEY, boardData);window.boardDataV2 = boardData; } catch(e) { console.warn('BoardV2 save error', e); } }
 
 // --- 核心：绝对时间锚点引擎 ---

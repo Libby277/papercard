@@ -96,6 +96,23 @@ function initChatActionListeners() {
             }
             return;
         }
+      // 🌟 新增：复制消息逻辑
+      if (target.classList.contains('copy-btn')) {
+        const textToCopy = message.text;
+        if (!textToCopy) return;
+        
+        // 优先使用现代剪贴板 API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(textToCopy).then(() => {
+            showNotification('已复制到剪贴板', 'success', 1000);
+          }).catch(() => {
+            _fallbackCopy(textToCopy);
+          });
+        } else {
+          _fallbackCopy(textToCopy);
+        }
+        return;
+      }
 
         // 新增：编辑消息逻辑        
         if (target.classList.contains('edit-btn')) {
@@ -204,6 +221,24 @@ function initChatActionListeners() {
             }
         });
     }
+
+          // 兼容旧浏览器/非HTTPS环境的复制方法
+    function _fallbackCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          showNotification('已复制到剪贴板', 'success', 1000);
+        } catch (e) {
+          showNotification('复制失败，请手动复制', 'error');
+        }
+        document.body.removeChild(ta);
+      }
 
     // 点击页面其他任意位置，自动收起弹出菜单
     document.addEventListener('click', (e) => {

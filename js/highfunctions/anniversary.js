@@ -479,12 +479,30 @@ function initSpecialDaySystem() {
     if (specialEvent) {
         // 👉 随机抽取文案
         let msg = `今天是特别的日子：${specialEvent.name}`;
-        if (specialEvent.customMessage) {
+        /*if (specialEvent.customMessage) {
             const lines = specialEvent.customMessage.split('\n').filter(s => s.trim() !== '');
             if (lines.length > 0) {
                 msg = lines[Math.floor(Math.random() * lines.length)];
             }
+        }*/
+        if (specialEvent.customMessage) {
+            const lines = specialEvent.customMessage.split('\n').filter(s => s.trim() !== '');
+            if (lines.length > 0) {
+                // 🎯 接入同样的盐值机制，保证通知弹窗和卡片显示的专属文案是同一条，且一天不变
+                let userSalt = localStorage.getItem('_dgUserSalt');
+                if (!userSalt) {
+                    userSalt = String(Math.floor(Math.random() * 999983) + 1);
+                    localStorage.setItem('_dgUserSalt', userSalt);
+                }
+                const noteSeed = parseInt(userSalt) + specialEvent.id;
+                function seededRandomNote(s) {
+                    const x = Math.sin(s * 9301 + 49297 + 233) * 1000003;
+                    return x - Math.floor(x);
+                }
+                msg = lines[Math.floor(seededRandomNote(noteSeed) * lines.length)];
+            }
         }
+
         
         window._todaySpecialNote = msg;
         

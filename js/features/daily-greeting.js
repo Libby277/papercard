@@ -82,8 +82,19 @@ var festivals = [
     var weathers = ['晴空万里', '多云转晴', '阴天有云', '细雨蒙蒙', '春风和煦', '微微寒冷', '清风徐徐', '雨后初晴', '夜色宁静', '月光皎洁', '晴间多云', '大雨滂沱', '雷雨交加', '小雪纷飞', '微风拂面', '多云天气', '雾气朦胧', '星光璀璨', '朝霞满天', '夕阳西下', '海风轻拂', '山间清爽', '秋叶飘落', '花香四溢', '绿意盎然', '雨后清新', '雪花飞舞', '阳光明媚'];
     var statusPool = ['正在想你 💭', '忙碌中，但心里有你', '好好的，别担心 ✨', '期待见到你', '有点想你了', '在努力变更好', '今天挺安静的', '心情不错哦 🌱', '一切都好，你呢？', '看月亮，想到你 🌙', '今天有点想你', '刚刚看到一朵云像你 ☁️', '工作再忙也会想你的', '今天你开心吗？', '梦里见 💤', '好好吃饭了吗？', '记得多喝水哦 💧', '今天有没有照顾好自己', '想你，但不说 🤫', '全世界你最可爱', '今天天气不错，适合想你', '吃饱喝足，开始想你', '今天也想牵你的手', '你有没有想我', '今天比昨天更想你', '看到好吃的想分享给你 🍜', '听到一首歌想到你 🎵', '今天也要加油鸭', '晚安，我的全世界 🌙', '早安，又是想你的一天'];
     
-    var todayKey = String(now.getFullYear()) + String(month) + String(day);
-    var seed = 0; for (var si = 0; si < todayKey.length; si++) seed += todayKey.charCodeAt(si) * (si + 1);
+    //var todayKey = String(now.getFullYear()) + String(month) + String(day);
+   // var seed = 0; for (var si = 0; si < todayKey.length; si++) seed += todayKey.charCodeAt(si) * (si + 1);
+       var todayKey = String(now.getFullYear()) + String(month) + String(day);
+    // 🎯 引入浏览器唯一盐值，破除全站同质化
+    var userSalt = localStorage.getItem('_dgUserSalt');
+    if (!userSalt) {
+      userSalt = String(Math.floor(Math.random() * 999983) + 1);
+      localStorage.setItem('_dgUserSalt', userSalt);
+    }
+    var saltedKey = todayKey + userSalt;
+    var seed = 0;
+    for (var si = 0; si < saltedKey.length; si++) seed += saltedKey.charCodeAt(si) * (si + 1);
+
     function seededRandDg(s, offset) { var x = Math.sin(s * 9301 + offset * 49297 + 233) * 1000003; return x - Math.floor(x); }
     var defaultWeather = weathers[Math.floor(seededRandDg(seed, 0) * weathers.length)];
     var customWeatherKey = 'customWeather_' + now.getFullYear() + '_' + month + '_' + day;
@@ -142,11 +153,25 @@ function _buildDailyGreeting() {
             });
         }
 
+        var userSaltForText = localStorage.getItem('_dgUserSalt') || '0';
         if (specialEvent) {
-            if (specialEvent.customMessage) {
+            /*if (specialEvent.customMessage) {
                 var lines = specialEvent.customMessage.split('\n').filter(function(s){ return s.trim() !== ''; });
                 if (lines.length > 0) specialNote = lines[Math.floor(Math.random() * lines.length)];
+            }*/
+            if (specialEvent.customMessage) {
+                var lines = specialEvent.customMessage.split('\n').filter(function(s){ return s.trim() !== ''; });
+                if (lines.length > 0) {
+                    // 🎯 用固定的盐值+纪念日ID抽取，保证同一天刷新不变，不同人纯概率随机
+                    var noteSeed = parseInt(userSaltForText) + specialEvent.id;
+                    function seededRandomNote(s) {
+                    var x = Math.sin(s * 9301 + 49297 + 233) * 1000003;
+                    return x - Math.floor(x);
+                    }
+                    specialNote = lines[Math.floor(seededRandomNote(noteSeed) * lines.length)];
+                }
             }
+
             if (!specialNote) specialNote = '今天是特别的日子：' + specialEvent.name;
             window._todaySpecialNote = specialNote;
             console.log('[公告调试] 命中特殊日子，文案：', specialNote); // 👈 调试日志
@@ -177,7 +202,11 @@ function _buildDailyGreeting() {
         // 处理常规随机文案
         var customData = {};
         try { customData = JSON.parse(localStorage.getItem('dg_custom_data') || '{}'); } catch(e2) {}
-        var dailySeed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate();
+       // var dailySeed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate();
+           // 🎯 标题和寄语也加上盐值，确保不同人看到的标题和寄语是纯概率随机的
+        //var userSaltForText = localStorage.getItem('_dgUserSalt') || '0';
+        var dailySeed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate() + parseInt(userSaltForText);
+
         function seededRandom(seed) { return (Math.abs(Math.sin(seed * 9301 + 49297) * 233280) % 233280) / 233280; }
         var todaySeedForText = dailySeed;
         

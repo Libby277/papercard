@@ -693,6 +693,8 @@ function startCall(isPartner) {
     S.minimized = false;
     S.isPartnerCall = !!isPartner;
     S.immersive = false;
+    const miniTimer = document.getElementById('call-mini-timer');
+    if (miniTimer) miniTimer.textContent = '00:00';
     document.getElementById('call-window')?.classList.remove('immersive');
 
     ['call-inc-avatar', 'call-conn-avatar', 'call-win-avatar', 'call-mini-av'].forEach(fillAv);
@@ -750,6 +752,14 @@ function startCall(isPartner) {
             if (conn) conn.classList.remove('visible');
             if (body) body.style.display = '';
             tick();
+            // 💡 新增：存档通话状态，防止刷新丢失
+            try {
+            localStorage.setItem('callActiveState', JSON.stringify({
+                startTime: S.startTime,
+                isPartnerCall: S.isPartnerCall,
+                minimized: false
+            }));
+            } catch(e) {}
         }, 1400 + Math.random() * 1400);
     }
 }
@@ -779,6 +789,7 @@ function startCall(isPartner) {
         sendCallMsg(dur);
         if (typeof showNotification === 'function' && dur > 1500)
             showNotification(`通话结束 · ${fmt(dur)}`, 'info', 3000);
+        try { localStorage.removeItem('callActiveState'); } catch(e) {}
     }
 
     /* ── Incoming ─────────────────────────────────────────── */
@@ -805,12 +816,23 @@ function startCall(isPartner) {
     /* ── Minimize / Restore ───────────────────────────────── */
     function minimizeWindow() {
         S.minimized = true;
+        try {
+            const saved = JSON.parse(localStorage.getItem('callActiveState') || '{}');
+            saved.minimized = true;
+            localStorage.setItem('callActiveState', JSON.stringify(saved));
+        } catch(e) {}
         document.getElementById('call-window')?.classList.remove('visible');
         const pill = document.getElementById('call-mini-pill');
         if (pill) { pill.classList.add('visible'); positionPill(); }
     }
     function restoreWindow() {
         S.minimized = false;
+        // 💡 新增：更新存档为大窗口状态
+        try {
+            const saved = JSON.parse(localStorage.getItem('callActiveState') || '{}');
+            saved.minimized = false;
+            localStorage.setItem('callActiveState', JSON.stringify(saved));
+        } catch(e) {}
         const win = document.getElementById('call-window');
         if (win) { positionWindow(); win.classList.add('visible'); }
         document.getElementById('call-mini-pill')?.classList.remove('visible');
@@ -845,6 +867,7 @@ function startCall(isPartner) {
         if (!hdr || !win) return;
         let on = false;
         hdr.addEventListener('pointerdown', e => {
+            if (e.target.closest('.call-top-btn')) return;
             if (e.pointerType === 'mouse' && e.button !== 0) return;
             e.preventDefault();
             const r = win.getBoundingClientRect();
@@ -1025,7 +1048,84 @@ function startCall(isPartner) {
         // 新增：同步拒接开关状态
         const rejectToggle = document.getElementById('call-reject-toggle');
         if (rejectToggle) rejectToggle.checked = S.rejectEnabled;
+          // 💡 优化：智能等待页面完全加载后再恢复通话，防止遮挡开场动画
+  const waitAndRestore = () => {
+    // 必须同时满足：1. 页面有输入框了  2. 页面不再处于刚加载的透明状态
+    const inputReady = document.getElementById('message-input');
+    const bodyLoaded = getComputedStyle(document.body).opacity >= '0.9';
+    if (inputReady && bodyLoaded) {
+      doRestoreCall();
+    } else {
+      setTimeout(waitAndRestore, 400); // 每 0.4 秒检查一次
     }
+  };
+
+  const doRestoreCall = () => {
+    try {
+        const savedCall = localStorage.getItem('callActiveState');
+        if (savedCall) {
+            const state = JSON.parse(savedCall);
+            if (state && state.startTime) {
+                // 💡 先检查 DOM 是否就绪，没就绪就等会再试，绝不提前改状态
+                const win = document.getElementById('call-window');
+                const body = document.getElementById('call-window-body');
+                if (!win || !body) {
+                    setTimeout(doRestoreCall, 500); // 500ms 后重试
+                    return;
+                }
+
+                // DOM 确认存在，再修改状态
+                S.active = true;
+                S.startTime = state.startTime;
+                S.isPartnerCall = !!state.isPartnerCall;
+
+                ['call-win-avatar', 'call-mini-av'].forEach(fillAv);
+                ['call-win-name', 'call-mini-name'].forEach(fillNm);
+                applyBg();
+
+                if (state.minimized) {
+                    minimizeWindow();
+
+                } else {
+                    positionWindow(); // 直接复用定位函数，确保窗口正确显示
+                    const conn = document.getElementById('call-connecting-state');
+                    if (conn) conn.classList.remove('visible');
+                    body.style.display = '';
+                    win.classList.add('visible');
+                    const pill = document.getElementById('call-mini-pill');
+                    if (pill) pill.classList.remove('visible');
+                }
+
+                tick(); // 启动计时器
+            } else {
+                localStorage.removeItem('callActiveState');
+            }
+        }
+    } catch(e) {
+        localStorage.removeItem('callActiveState');
+    }
+};
+
+
+  // 延迟 1.5 秒后开始检查（给开场动画留出时间）
+  setTimeout(waitAndRestore, 3500);
+}
+
+// ── 通话事件桥接（配合 call.js 使用） ──
+window._addCallEvent = (icon, label, detail) => {
+    window.addMessage({
+        id: Date.now() + Math.random(),
+        sender: 'system',
+        text: label + (detail ? ' · ' + detail : ''),
+        timestamp: new Date(),
+        status: 'received',
+        type: 'call-event',
+        callIcon: icon || 'fa-video',
+        callDetail: detail || null,
+        favorited: false,
+        note: null,
+    });
+};
 
     init();
 })();

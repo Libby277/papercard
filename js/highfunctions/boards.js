@@ -405,9 +405,28 @@ function openDetail(threadId, type) {
     else if (!isMe && last.sender === 'partner') actionHtml = `<button class="board-add-btn" style="margin-top:16px;" onclick="window._bv2_openCompose('reply','${threadId}','partner')"><i class="fas fa-reply"></i> 回复</button>`;
     else actionHtml = `<div class="board-waiting-reply" style="margin-top:16px;"><i class="fas fa-hourglass-half"></i> 等待回复中...</div>`;
   }
-  document.getElementById('board-v2-detail-container').innerHTML = `<div class="board-detail-wrapper"><div class="board-detail-header"><button class="board-detail-back" onclick="hideModal(document.getElementById('board-detail-modal'))"><i class="fas fa-arrow-left"></i></button><div class="board-detail-title">留言详情</div>
-  <div class="board-detail-actions">${thread.replies.map(r => r.text ? `<button class="board-detail-action-btn" onclick="window._bv2_editText('${r.id}')" title="编辑"><i class="fas fa-pen"></i></button>` : '').join('')}<button class="board-detail-action-btn delete" onclick="window._bv2_deleteThread('${threadId}','${type}')"><i class="fas fa-trash"></i></button></div>
-  </div><div class="board-paper"><div class="board-paper-top-line"></div><div class="board-paper-content">${bodyHtml}${actionHtml}<div class="board-detail-date">${new Date(thread.createdAt).toLocaleDateString('zh-CN', {year:'numeric',month:'long',day:'numeric',weekday:'long'})}</div></div></div></div>`;
+  document.getElementById('board-v2-detail-container').innerHTML = `
+  <div class="board-detail-wrapper">
+    <div class="board-detail-header">
+      <button class="board-detail-back" onclick="hideModal(document.getElementById('board-detail-modal'))"><i class="fas fa-arrow-left"></i></button>
+      <div class="board-detail-title">留言详情</div>
+      <div class="board-detail-actions">
+          <button class="board-detail-action-btn" onclick="window._bv2_toggleGlobalEdit()" title="全部编辑"><i class="fas fa-pen"></i></button>
+          <button class="board-detail-action-btn delete" onclick="window._bv2_deleteThread('${threadId}','${type}')"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>
+    <div class="board-paper"><div class="board-paper-top-line"></div>
+      <div class="board-paper-content">${bodyHtml}${actionHtml}
+        <div id="board-edit-actions-bar" style="display:none; margin-top:24px; padding-top:16px; border-top:1px dashed var(--border-color); gap:10px; justify-content:flex-end;">
+          <button class="board-compose-btn cancel" onclick="window._bv2_cancelGlobalEdit()">取消</button>
+          <button class="board-compose-btn send" onclick="window._bv2_saveGlobalEdit()">保存</button>
+        </div>
+        <div class="board-detail-date">
+        ${new Date(thread.createdAt).toLocaleDateString('zh-CN', {year:'numeric',month:'long',day:'numeric',weekday:'long'})}
+        </div>
+      </div>
+    </div>
+  </div>`;
   
   hideModal(document.getElementById('envelope-board-modal'));
   setTimeout(() => { showModal(document.getElementById('board-detail-modal')); const p = document.querySelector('.board-paper'); if(p) p.scrollTop = p.scrollHeight; }, 200);
@@ -514,6 +533,161 @@ function exportTxt(type) {
   a.href = URL.createObjectURL(blob); a.download = `留言板-${new Date().toLocaleDateString()}.txt`; a.click();
   if(typeof showNotification === 'function') showNotification('导出成功', 'success');
 }
+// 点击铅笔：全页面进入编辑，隐藏干扰按钮
+window._bv2_toggleGlobalEdit = function() {
+    const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
+    const thread = threads.find(t => t.id === currentThreadId);
+    if (!thread) return;
+
+    const editBar = document.getElementById('board-edit-actions-bar');
+    const penBtn = document.querySelector('.board-detail-actions .board-detail-action-btn:not(.delete)');
+    const deleteBtn = document.querySelector('.board-detail-actions .board-detail-action-btn.delete');
+
+    // 如果已经在编辑状态，再次点笔就等于点保存
+    if (editBar && editBar.style.display === 'flex') {
+        window._bv2_saveGlobalEdit();
+        return;
+    }
+
+    // 开启所有文本框
+    thread.replies.forEach(r => {
+        if (r.text) {
+            const el = document.getElementById(`bv2-text-${r.id}`);
+            if (el) {
+                el.dataset.originalText = el.textContent; // 备份原文，用于取消
+                el.contentEditable = true;
+                el.classList.add('editing');
+            }
+        }
+    });
+
+    // 切换UI显示
+    if (editBar) editBar.style.display = 'flex';
+    if (penBtn) penBtn.style.display = 'none';
+    if (deleteBtn) deleteBtn.style.display = 'none';
+    
+    // 隐藏底部的“继续留言/等待回复”防误触
+    const originalActions = document.querySelector('.board-paper-content > .board-add-btn, .board-paper-content > .board-waiting-reply');
+    if (originalActions) originalActions.style.display = 'none';
+};
+
+// 点击保存：存盘并恢复原样
+window._bv2_saveGlobalEdit = async function() {
+    const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
+    const thread = threads.find(t => t.id === currentThreadId);
+    if (!thread) return;
+
+    let needSave = false;
+    thread.replies.forEach(r => {
+        if (r.text) {
+            const el = document.getElementById(`bv2-text-${r.id}`);
+            if (el && el.classList.contains('editing')) {
+                const newText = el.textContent.trim();
+                if (newText && newText !== r.text) {
+                    r.text = newText;
+                    needSave = true;
+                }
+                el.contentEditable = false;
+                el.classList.remove('editing');
+                delete el.dataset.originalText;
+            }
+        }
+    });
+
+    if (needSave) {
+        await saveData();
+        if(typeof showNotification === 'function') showNotification('修改已保存', 'success');
+    }
+    restoreDetailViewUI();
+};
+
+// 点击取消：丢弃修改并恢复原样
+window._bv2_cancelGlobalEdit = function() {
+    const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
+    const thread = threads.find(t => t.id === currentThreadId);
+    if (!thread) return;
+
+    thread.replies.forEach(r => {
+        if (r.text) {
+            const el = document.getElementById(`bv2-text-${r.id}`);
+            if (el && el.classList.contains('editing')) {
+                el.textContent = el.dataset.originalText || r.text; // 还原备份
+                el.contentEditable = false;
+                el.classList.remove('editing');
+                delete el.dataset.originalText;
+            }
+        }
+    });
+    restoreDetailViewUI();
+};
+
+// 内部公用：恢复界面的默认状态
+function restoreDetailViewUI() {
+    const editBar = document.getElementById('board-edit-actions-bar');
+    const penBtn = document.querySelector('.board-detail-actions .board-detail-action-btn:not(.delete)');
+    const deleteBtn = document.querySelector('.board-detail-actions .board-detail-action-btn.delete');
+    const originalActions = document.querySelector('.board-paper-content > .board-add-btn, .board-paper-content > .board-waiting-reply');
+
+    if (editBar) editBar.style.display = 'none';
+    if (penBtn) penBtn.style.display = 'flex';
+    if (deleteBtn) deleteBtn.style.display = 'flex';
+    if (originalActions) originalActions.style.display = '';
+}
+
+// 点击公告天气标签：弹出修改框
+window.startEditDgWeather = function() {
+    var now = new Date();
+    var key = 'customWeather_' + now.getFullYear() + '_' + (now.getMonth()+1) + '_' + now.getDate();
+    var current = localStorage.getItem(key) || '';
+    
+    var old = document.getElementById('dg-weather-edit-modal');
+    if (old) old.remove();
+
+    var wrap = document.createElement('div');
+    wrap.id = 'dg-weather-edit-modal';
+    wrap.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);';
+    wrap.innerHTML = `
+        <div style="background:var(--primary-bg);border-radius:20px;padding:22px 20px;width:min(320px,88vw);box-shadow:0 20px 60px rgba(0,0,0,0.28);border:1px solid var(--border-color);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <span style="font-size:15px;font-weight:700;color:var(--text-primary);font-family:var(--font-family);">自定义天气</span>
+                <button id="dg-weather-close" style="background:none;border:none;font-size:18px;color:var(--text-secondary);cursor:pointer;">✕</button>
+            </div>
+            <input id="dg-weather-input" type="text" maxlength="20" placeholder="例如：晴空万里、细雨蒙蒙" value="${current.replace(/"/g, '&quot;')}" style="width:100%;padding:10px;border:1.5px solid var(--border-color);border-radius:10px;background:var(--secondary-bg);color:var(--text-primary);font-size:13px;outline:none;font-family:var(--font-family);box-sizing:border-box;margin-bottom:16px;">
+            <div style="display:flex;gap:8px;">
+                <button id="dg-weather-clear" style="flex:1;padding:9px;border:1px solid var(--border-color);border-radius:10px;background:var(--secondary-bg);color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">恢复默认</button>
+                <button id="dg-weather-save" style="flex:2;padding:9px;border:none;border-radius:10px;background:var(--accent-color);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-family);">保存</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(wrap);
+
+    var input = document.getElementById('dg-weather-input');
+    if(input) input.focus();
+
+    function close() { wrap.remove(); }
+
+    document.getElementById('dg-weather-close').onclick = close;
+    wrap.onclick = function(e) { if(e.target === wrap) close(); };
+
+    document.getElementById('dg-weather-clear').onclick = function() {
+        localStorage.removeItem(key);
+        if (typeof _buildDailyGreeting === 'function') _buildDailyGreeting();
+        close();
+        if (typeof showNotification === 'function') showNotification('已恢复默认天气', 'success', 1500);
+    };
+
+    document.getElementById('dg-weather-save').onclick = function() {
+        var val = input.value.trim();
+        if (val) {
+            localStorage.setItem(key, val);
+            if (typeof _buildDailyGreeting === 'function') _buildDailyGreeting();
+            close();
+            if (typeof showNotification === 'function') showNotification('天气已更新 ✓', 'success', 1500);
+        } else {
+            if (typeof showNotification === 'function') showNotification('请输入天气内容', 'warning');
+        }
+    };
+};
 
 // --- 暴露全局接口 ---
 window.loadEnvelopeData = loadData;

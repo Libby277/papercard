@@ -1233,16 +1233,23 @@ function _showGroupEditor(group) {
         if (!name) { showNotification('请输入分组名称', 'warning'); return; }
         if (isNew) {
             if (!window.customReplyGroups) window.customReplyGroups = [];
-            customReplyGroups.push({ id: Date.now(), name, color: selectedColor, disabled: false, items: [] });
-        } else {
-            group.name = name;
-            group.color = selectedColor;
-        }
-        throttledSaveData();
-        overlay.remove();
-        renderReplyLibrary();
-        showNotification(isNew ? '✓ 分组已创建' : '✓ 分组已更新', 'success');
-    };
+            let initItems = [];
+            // 检查是不是从“快速分组”跳过来的
+            if (window._pendingQuickGroupItems && window._pendingQuickGroupItems.length > 0) {
+                initItems = window._pendingQuickGroupItems;
+                
+                // 【新增】既然建分组成功了，顺便把字卡加进主池子
+                const pendingTarget = window._pendingQuickGroupTarget;
+                if (pendingTarget) {
+                    initItems.forEach(item => {
+                        if (!pendingTarget.includes(item)) pendingTarget.push(item);
+                    });
+                    window._pendingQuickGroupTarget = null;
+                }
+                window._pendingQuickGroupItems = null; 
+            }
+        };
+    }
 }
 
 function _showSingleItemGroupPicker(itemText) {
@@ -1825,11 +1832,6 @@ function _showIOSheet(title, subtitle, modules, icon, onConfirm, showMode = fals
     };
 }
 
-/*function _makeOverlay() {
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;';
-    return overlay;
-}*/
 function _makeOverlay() {
     const overlay = document.createElement('div');
     
@@ -1859,118 +1861,94 @@ function _makeOverlay() {
     return overlay;
 }
 
-
-/*function _showBatchAddDialog() {
+function _showQuickGroupPicker(items, targetArr, callback) {
     const overlay = _makeOverlay();
     const panel = document.createElement('div');
-    panel.style.cssText = `
-        background:var(--secondary-bg);border-radius:22px;padding:24px;
-        width:92%;max-width:420px;
-        box-shadow:0 24px 80px rgba(0,0,0,.45);
-        animation:popIn 0.22s cubic-bezier(.34,1.56,.64,1);
-    `;
+    panel.style.cssText = `background:var(--secondary-bg);border-radius:22px;padding:22px;width:92%;max-width:340px;box-shadow:0 24px 80px rgba(0,0,0,.45);animation:popIn 0.22s cubic-bezier(.34,1.56,.64,1);`;
+    
     panel.innerHTML = `
         <style>@keyframes popIn { from{opacity:0;transform:scale(.93)} to{opacity:1;transform:scale(1)} }</style>
-        <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px;">批量添加字卡</div>
-        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6;">每行一条，自动去重</div>
-        <textarea id="batch-add-input" rows="10" placeholder="在此粘贴内容，每行一条…" style="
-            width:100%;box-sizing:border-box;padding:12px 14px;
-            border:1.5px solid var(--border-color);border-radius:13px;
-            background:var(--primary-bg);color:var(--text-primary);
-            font-size:13px;font-family:var(--font-family);outline:none;resize:vertical;
-            line-height:1.6;transition:border 0.18s;
-        "></textarea>
-        <div style="font-size:11px;color:var(--text-secondary);margin-top:6px;margin-bottom:16px;">
-            <span id="batch-add-count">0 条</span>
+        
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-size:15px;font-weight:700;color:var(--text-primary);">添加到分组</div>
+            <button id="qgp-close" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:18px;padding:4px 6px;border-radius:6px;">✕</button>
         </div>
-        <div style="display:flex;gap:10px;">
-            <button id="ba-cancel" style="flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:13px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
-            <button id="ba-confirm" style="flex:2;padding:12px;border:none;border-radius:13px;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-family);">添加</button>
+        
+        <div style="display:flex;flex-direction:column;gap:7px;max-height:50vh;overflow-y:auto;margin-bottom:14px;">
+            ${customReplyGroups.map((g, i) => `
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:11px;border:1.5px solid var(--border-color);background:var(--primary-bg);">
+                    <input type="radio" name="qgp" value="${i}" style="accent-color:${g.color};">
+                    <span style="width:9px;height:9px;border-radius:50%;background:${g.color||'#aaa'};flex-shrink:0;"></span>
+                    <span style="flex:1;font-size:13px;color:var(--text-primary);font-weight:600;">${g.name}</span>
+                    <span style="font-size:11px;color:var(--text-secondary);">${(g.items||[]).length} 条</span>
+                </label>
+            `).join('')}
+        </div>
+        
+        <div style="display:flex;gap:8px;">
+            <button id="qgp-cancel" style="flex:1;padding:11px;border:1.5px solid var(--border-color);border-radius:12px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">不分组</button>
+            <button id="qgp-new-btn" style="flex:1.5;padding:11px;border:none;border-radius:12px;background:var(--accent-color);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-family);">新建分组</button>
+            <button id="qgp-save" style="flex:1.5;padding:11px;border:none;border-radius:12px;background:var(--accent-color);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-family);">确认</button>
         </div>
     `;
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
 
-    const ta = panel.querySelector('#batch-add-input');
-    const countEl = panel.querySelector('#batch-add-count');
-    ta.addEventListener('input', () => {
-        const lines = ta.value.split('\n').filter(l => l.trim());
-        countEl.textContent = `${lines.length} 条`;
+    // 点 X：彻底取消！字卡不加进去，不弹通知，什么都不干
+    panel.querySelector('#qgp-close').onclick = () => {
+        overlay.remove();
+    };
+    overlay.addEventListener('click', e => {
+        if (e.target === overlay) overlay.remove();
     });
-    ta.addEventListener('focus', e => { e.target.style.borderColor = 'var(--accent-color)'; });
-    ta.addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
 
-    panel.querySelector('#ba-cancel').onclick = () => overlay.remove();
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-    panel.querySelector('#ba-confirm').onclick = () => {
-        const lines = ta.value.split('\n').map(l => l.trim()).filter(Boolean);
-        if (!lines.length) { showNotification('请输入内容', 'warning'); return; }
-        let added = 0, skipped = 0;
-        lines.forEach(val => {
-            const norm = normalizeStringStrict(val);
-            const isDup = currentSubTab === 'custom'
-                ? (customReplies.some(r => normalizeStringStrict(r) === norm) || CONSTANTS.REPLY_MESSAGES.some(r => normalizeStringStrict(r) === norm))
-                : false;
-            if (isDup) { skipped++; return; }
-            if (currentSubTab === 'custom') customReplies.push(val);
-            else if (currentSubTab === 'pokes') customPokes.push(val);
-            else if (currentSubTab === 'statuses') customStatuses.push(val);
-            else if (currentSubTab === 'mottos') customMottos.push(val);
-            added++;
+    // 点“不分组”：字卡加进池子，但不归入任何分组
+    panel.querySelector('#qgp-cancel').onclick = () => {
+        items.forEach(item => {
+            if (!targetArr.includes(item)) targetArr.push(item);
         });
         throttledSaveData();
         overlay.remove();
-        renderReplyLibrary();
-        showNotification(`✓ 添加 ${added} 条${skipped ? `，跳过 ${skipped} 条重复` : ''}`, 'success');
+        if (callback) callback(); // 触发外层的“已添加”通知
     };
-}*/
-function _showQuickGroupPicker(items, callback) {
-  const overlay = _makeOverlay();
-  const panel = document.createElement('div');
-  panel.style.cssText = `background:var(--secondary-bg);border-radius:22px;padding:22px;width:92%;max-width:340px;box-shadow:0 24px 80px rgba(0,0,0,.45);animation:popIn 0.22s cubic-bezier(.34,1.56,.64,1);`;
-  
-  panel.innerHTML = `
-  <style>@keyframes popIn { from{opacity:0;transform:scale(.93)} to{opacity:1;transform:scale(1)} }</style>
-    <div style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:14px;">添加到分组</div>
-    <div style="display:flex;flex-direction:column;gap:7px;max-height:50vh;overflow-y:auto;margin-bottom:14px;">
-      ${customReplyGroups.map((g, i) => `
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:11px;border:1.5px solid var(--border-color);background:var(--primary-bg);">
-          <input type="radio" name="qgp" value="${i}" style="accent-color:${g.color};">
-          <span style="width:9px;height:9px;border-radius:50%;background:${g.color||'#aaa'};flex-shrink:0;"></span>
-          <span style="flex:1;font-size:13px;color:var(--text-primary);font-weight:600;">${g.name}</span>
-          <span style="font-size:11px;color:var(--text-secondary);">${(g.items||[]).length} 条</span>
-        </label>
-      `).join('')}
-    </div>
-    <div style="display:flex;gap:10px;">
-      <button id="qgp-cancel" style="flex:1;padding:11px;border:1.5px solid var(--border-color);border-radius:12px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">不分组</button>
-      <button id="qgp-save" style="flex:2;padding:11px;border:none;border-radius:12px;background:var(--accent-color);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-family);">确认</button>
-    </div>
-  `;
-  overlay.appendChild(panel);
-  document.body.appendChild(overlay);
-  
-  // 点"不分组"或点空白：直接关掉，什么都不做（字卡已经在池子里了）
-  const doCancel = () => { overlay.remove(); callback(); };
-  panel.querySelector('#qgp-cancel').onclick = doCancel;
-  overlay.addEventListener('click', e => { if (e.target === overlay) doCancel(); });
-  
-  // 选了分组点确认：把字卡塞进对应分组
-  panel.querySelector('#qgp-save').onclick = () => {
-    const checked = panel.querySelector('input[name="qgp"]:checked');
-    if (checked) {
-      const group = customReplyGroups[parseInt(checked.value)];
-      if (group) {
-        if (!group.items) group.items = [];
-        items.forEach(t => { if (!group.items.includes(t)) group.items.push(t); });
-        throttledSaveData();
-        showNotification(`✓ 已添加到「${group.name}」`, 'success');
-      }
-    }
-    overlay.remove();
-    callback();
-  };
+
+    // 点“新建分组”：跳转编辑器
+    panel.querySelector('#qgp-new-btn').onclick = () => {
+        window._pendingQuickGroupItems = items;
+        window._pendingQuickGroupTarget = targetArr; // 记住要加去哪个池子
+        overlay.remove();
+        _showGroupEditor(null);
+    };
+
+    // 点“确认”：加进池子，并归入所选分组
+    panel.querySelector('#qgp-save').onclick = () => {
+        const checked = panel.querySelector('input[name="qgp"]:checked');
+        if (!checked) {
+            showNotification('请选择一个分组', 'warning');
+            return;
+        }
+        
+        // 1. 先把字卡加进池子
+        items.forEach(item => {
+            if (!targetArr.includes(item)) targetArr.push(item);
+        });
+        
+        // 2. 再把字卡塞进分组
+        const group = customReplyGroups[parseInt(checked.value)];
+        if (group) {
+            if (!group.items) group.items = [];
+            items.forEach(t => {
+                if (!group.items.includes(t)) group.items.push(t);
+            });
+            throttledSaveData();
+            overlay.remove();
+            showNotification(`✓ 已添加到「${group.name}」`, 'success');
+            if (callback) callback();
+        }
+    };
 }
+
+
 
 function _showBatchAddDialog() {
     const overlay = _makeOverlay();
@@ -2024,109 +2002,83 @@ function _showBatchAddDialog() {
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 
     panel.querySelector('#ba-confirm').onclick = () => {
-        const lines = ta.value.split('\n').map(l => l.trim()).filter(Boolean);
-        if (!lines.length) { showNotification('请输入内容', 'warning'); return; }
+          const lines = ta.value.split('\n').map(l => l.trim()).filter(Boolean);
+      if (!lines.length) {
+        showNotification('请输入内容', 'warning');
+        return;
+      }
+      let added = 0, skipped = 0;
+      let addedItems = [];
+      // 用临时变量记住要加到哪个池子
+      let finalTargetArr = null; 
+      lines.forEach(val => {
+        // 开场动画必须包含 | 分隔符
+        if (currentSubTab === 'intros' && !val.includes('|')) {
+          skipped++;
+          return;
+        }
+        const norm = normalizeStringStrict(val);
+        let targetArr = null;
+        let compareArr = null;
+        if (currentSubTab === 'custom') {
+          targetArr = customReplies;
+          compareArr = [...customReplies, ...CONSTANTS.REPLY_MESSAGES];
+        } else if (currentSubTab === 'pokes') {
+          targetArr = customPokes;
+          compareArr = customPokes;
+        } else if (currentSubTab === 'statuses') {
+          targetArr = customStatuses;
+          compareArr = customStatuses;
+        } else if (currentSubTab === 'mottos') {
+          targetArr = customMottos;
+          compareArr = customMottos;
+        } else if (currentSubTab === 'intros') {
+          targetArr = customIntros;
+          compareArr = customIntros;
+        } else if (currentSubTab === 'emojis') {
+          targetArr = customEmojis;
+          compareArr = customEmojis;
+        }
+        if (!targetArr) return;
+        if (compareArr.some(r => normalizeStringStrict(r) === norm)) {
+          skipped++;
+          return;
+        }
+        // 【关键：绝对不能在这里 push，先存起来等用户选完分组再加！】
+        finalTargetArr = targetArr;
+        added++;
+        addedItems.push(val);
+      });
+      
+      overlay.remove();
+      
+      if (added === 0) {
+         if (skipped > 0) showNotification(`全部重复，跳过 ${skipped} 条`, 'info');
+         return;
+      }
 
-        let added = 0, skipped = 0;
-        let addedItems = [];
-        lines.forEach(val => {
-            // 开场动画必须包含 | 分隔符
-            if (currentSubTab === 'intros' && !val.includes('|')) {
-                skipped++;
-                return;
-            }
-            const norm = normalizeStringStrict(val);
-            let targetArr = null;
-            let compareArr = null;
-            if (currentSubTab === 'custom')   { targetArr = customReplies;   compareArr = [...customReplies, ...CONSTANTS.REPLY_MESSAGES]; }
-            else if (currentSubTab === 'pokes')    { targetArr = customPokes;     compareArr = customPokes; }
-            else if (currentSubTab === 'statuses')  { targetArr = customStatuses;  compareArr = customStatuses; }
-            else if (currentSubTab === 'mottos')    { targetArr = customMottos;     compareArr = customMottos; }
-            else if (currentSubTab === 'intros')    { targetArr = customIntros;     compareArr = customIntros; }
-            else if (currentSubTab === 'emojis')    { targetArr = customEmojis;     compareArr = customEmojis; }
-            if (!targetArr) return;
+      let msg = `✓ 添加 ${added} 条`;
+      if (skipped > 0) {
+        msg += currentSubTab === 'intros' ? `，跳过 ${skipped} 条（格式错误或重复）` : `，跳过 ${skipped} 条重复`;
+      }
 
-            if (compareArr.some(r => normalizeStringStrict(r) === norm)) {
-                skipped++;
-                return;
-            }
-            targetArr.push(val);
-            added++;
-            addedItems.push(val);
+      // 如果有分组，先问怎么分，再决定加不加
+      if (currentSubTab === 'custom' && addedItems.length > 0 && customReplyGroups && customReplyGroups.length > 0) {
+        _showQuickGroupPicker(addedItems, finalTargetArr, () => {
+          renderReplyLibrary();
+          showNotification(msg, 'success');
         });
-
+      } else {
+        // 没有分组，直接加进去
+        if (finalTargetArr) addedItems.forEach(item => finalTargetArr.push(item));
         throttledSaveData();
-        overlay.remove();
         renderReplyLibrary();
-        // 如果是主字卡，且真的加进去了新内容，且存在分组，就问一句放哪
-        if (currentSubTab === 'custom' && addedItems.length > 0 && customReplyGroups && customReplyGroups.length > 0) {
-            _showQuickGroupPicker(addedItems, () => renderReplyLibrary());
-        } else {
-            renderReplyLibrary();
-        }
-        let msg = `✓ 添加 ${added} 条`;
-        if (skipped > 0) {
-            msg += currentSubTab === 'intros'
-                ? `，跳过 ${skipped} 条（格式错误或重复）`
-                : `，跳过 ${skipped} 条重复`;
-        }
         showNotification(msg, 'success');
+      }
     };
+
 }
 
-
-/*function initReplyLibraryListeners() {
-    const entryBtn = document.getElementById('custom-replies-function');
-    if (entryBtn) {
-        entryBtn.addEventListener('click', () => {
-            hideModal(DOMElements.advancedModal.modal);
-            currentMajorTab = 'reply';
-            currentSubTab = 'custom';
-            _batchModeActive = false;
-            _batchSelectedIndices.clear();
-            _searchVisible = false;
-            _searchQuery = '';
-            _activeGroupFilter = null;
-            document.querySelectorAll('.sidebar-btn').forEach(b => {
-                b.classList.toggle('active', b.dataset.major === 'reply');
-            });
-            renderReplyLibrary();
-            showModal(DOMElements.customRepliesModal.modal);
-        });
-    }
-
-    document.querySelectorAll('.sidebar-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentMajorTab = btn.dataset.major;
-
-
-            if (currentMajorTab === 'announcement') return;
-
-            const listArea = document.getElementById('custom-replies-list');
-            const annPanel = document.getElementById('announcement-panel');
-            const crToolbar = document.getElementById('cr-toolbar');
-            const subTabs = document.getElementById('cr-sub-tabs');
-            const addBtn = document.getElementById('add-custom-reply');
-            const titleEl = document.getElementById('cr-modal-title');
-            if (listArea) listArea.style.display = '';
-            if (annPanel) annPanel.style.display = 'none';
-            if (crToolbar) crToolbar.style.display = '';
-            if (subTabs) subTabs.style.display = '';
-            //if (addBtn) addBtn.style.display = '';
-            if (addBtn) addBtn.style.display = currentSubTab === 'period' ? 'none' : '';
-            if (titleEl) titleEl.textContent = '内容管理';
-
-            _batchModeActive = false;
-            _batchSelectedIndices.clear();
-            _searchVisible = false;
-            _searchQuery = '';
-            _activeGroupFilter = null;
-            currentSubTab = LIBRARY_CONFIG[currentMajorTab].tabs[0].id;
-            renderReplyLibrary();
-        });
-    });*/
     function initReplyLibraryListeners() {
     const entryBtn = document.getElementById('custom-replies-function');
     if (entryBtn) {

@@ -985,6 +985,21 @@ function manageAutoSendTimer() {
                     lastSender = null; 
                 }
 
+                if (msg.type === 'call-event') {
+                    const callEvDiv = document.createElement('div');
+                    callEvDiv.className = 'call-event-message';
+                    callEvDiv.dataset.id = msg.id;
+                    const icon = msg.callIcon || 'fa-video';
+                    const isRejected = icon === 'fa-phone-slash';
+                    const colorClass = isRejected ? 'call-event-pill--rejected' : 'call-event-pill--ended';
+                    const detail = msg.callDetail ? `<span class="call-event-detail">${msg.callDetail}</span>` : '';
+                    callEvDiv.innerHTML = `<div class="call-event-pill ${colorClass}"><i class="fas ${icon} call-event-icon"></i><span class="call-event-label">${msg.text.replace(/ · .*/, '')}</span>${detail}<button class="call-event-delete" title="删除" onclick="(function(btn){const id=btn.closest('[data-id]').dataset.id;const idx=messages.findIndex(m=>String(m.id)===String(id));if(idx>-1){messages.splice(idx,1);renderMessages();throttledSaveData();}})(this)"><i class="fas fa-times"></i></button></div>`;
+                    fragment.appendChild(callEvDiv);
+                    lastSender = 'system';
+                    return;
+                }
+
+
                 if (msg.type === 'system') {
                     const systemMsgDiv = document.createElement('div');
                     systemMsgDiv.className = 'system-message';
@@ -1116,6 +1131,10 @@ function manageAutoSendTimer() {
                 
                 const starIcon = msg.favorited ? 'fas fa-star' : 'far fa-star'; 
                 actionsHTML += `<button class="meta-action-btn favorite-action-btn ${msg.favorited ? 'favorited' : ''}" title="${msg.favorited ? '取消收藏' : '收藏'}"><i class="${starIcon}"></i></button>`;
+                      // 🌟 新增：复制按钮（只有有文字才显示，图片不显示）
+                if (msg.text) {
+                    actionsHTML += `<button class="meta-action-btn copy-btn" title="复制"><i class="fas fa-copy"></i></button>`;
+                }
                 if (msg.sender === 'user') {
                     actionsHTML += `<button class="meta-action-btn edit-btn" title="编辑"><i class="fas fa-pencil-alt"></i></button>`;
                 }
@@ -1250,7 +1269,7 @@ function manageAutoSendTimer() {
         };
 
 
-        const addMessage = (message) => {
+        /*const addMessage = (message) => {
             if (!(message.timestamp instanceof Date)) message.timestamp = new Date(message.timestamp);
             messages.push(message);
             displayedMessageCount++;
@@ -1259,7 +1278,34 @@ function manageAutoSendTimer() {
             renderMessages(false);
             //throttledSaveData();
             immediateSaveData(); 
+        };*/
+        const addMessage = (message) => {
+            if (!(message.timestamp instanceof Date)) message.timestamp = new Date(message.timestamp);
+            messages.push(message);
+            displayedMessageCount++;
+            const container = DOMElements.chatContainer;
+            container.style.opacity = '1';
+            renderMessages(false); 
+            
+            // 🌟 强制同步滚到底部，解决 rAF 导致的往上跳动
+            container.scrollTop = container.scrollHeight;
+            
+            // 🌟 兼容移动端：软键盘收起时视口大小会变，延迟补位防止滑上去
+            if (window.visualViewport) {
+                const fixScroll = () => {
+                container.scrollTop = container.scrollHeight;
+                window.visualViewport.removeEventListener('resize', fixScroll);
+                };
+                window.visualViewport.addEventListener('resize', fixScroll);
+            } else {
+                // 旧浏览器降级方案
+                setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
+            }
+
+            //throttledSaveData();
+            immediateSaveData();
         };
+        window.addMessage = addMessage;
 
         function optimizeImage(file, maxWidth = 800, quality = 0.7) {
             return new Promise((resolve, reject) => {
@@ -1328,6 +1374,7 @@ function manageAutoSendTimer() {
 
             DOMElements.messageInput.value = '';
             DOMElements.messageInput.style.height = '46px';
+            DOMElements.messageInput.blur();
             if (imageFile && imageFile.size > MAX_IMAGE_SIZE) {
                 showNotification('图片大小不能超过5MB', 'error'); DOMElements.imageInput.value = ''; return;
             }

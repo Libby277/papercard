@@ -322,7 +322,7 @@ function handleKeepAliveSend(text, imageFile) {
   // 3. 直接往 messages 数组里塞一条新消息（绕过 sendMessage 里的失焦逻辑）
   const newMsg = {
     id: Date.now(),
-    sender: 'me',
+    sender: 'user',
     text: text || '',
     image: null, // 如果需要支持保活模式下发图片，需额外写异步读取逻辑，这里先保证文字绝对顺滑
     timestamp: new Date(),

@@ -316,3 +316,57 @@ window.closeDailyGreeting = function() { try { var modal = document.getElementBy
 window.reopenDailyGreeting = function() { try { if (typeof _buildDailyGreeting === 'function') _buildDailyGreeting(); var modal = document.getElementById('daily-greeting-modal'); if (modal) { modal.style.opacity = '0'; modal.classList.remove('hidden'); requestAnimationFrame(function() { modal.style.transition = 'opacity 0.3s ease'; modal.style.opacity = '1'; }); } } catch(e) {} };
 window.tryShowDailyGreeting = function() { try { if (localStorage.getItem('dailyGreetingShown') === new Date().toDateString()) return; var now = new Date(); var todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0'); var moodDataRaw = window.moodData || {}; var todayMood = moodDataRaw[todayStr]; if (!todayMood || !todayMood.partner) { setTimeout(function() { var refreshedMood = (window.moodData || {})[todayStr]; _buildDailyGreeting(); var modal = document.getElementById('daily-greeting-modal'); if (modal) modal.classList.remove('hidden'); localStorage.setItem('dailyGreetingShown', new Date().toDateString()); }, 45000); return; } _buildDailyGreeting(); var modal = document.getElementById('daily-greeting-modal'); if (modal) modal.classList.remove('hidden'); } catch(e) { console.warn('Daily greeting show error:', e); } };
 
+//点击公告天气标签：弹出修改框
+window.startEditDgWeather = function() {
+    var now = new Date();
+    var key = 'customWeather_' + now.getFullYear() + '_' + (now.getMonth()+1) + '_' + now.getDate();
+    var current = localStorage.getItem(key) || '';
+    
+    var old = document.getElementById('dg-weather-edit-modal');
+    if (old) old.remove();
+
+    var wrap = document.createElement('div');
+    wrap.id = 'dg-weather-edit-modal';
+    wrap.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);';
+    wrap.innerHTML = `
+        <div style="background:var(--primary-bg);border-radius:20px;padding:22px 20px;width:min(320px,88vw);box-shadow:0 20px 60px rgba(0,0,0,0.28);border:1px solid var(--border-color);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <span style="font-size:15px;font-weight:700;color:var(--text-primary);font-family:var(--font-family);">自定义天气</span>
+                <button id="dg-weather-close" style="background:none;border:none;font-size:18px;color:var(--text-secondary);cursor:pointer;">✕</button>
+            </div>
+            <input id="dg-weather-input" type="text" maxlength="20" placeholder="例如：晴空万里、细雨蒙蒙" value="${current.replace(/"/g, '&quot;')}" style="width:100%;padding:10px;border:1.5px solid var(--border-color);border-radius:10px;background:var(--secondary-bg);color:var(--text-primary);font-size:13px;outline:none;font-family:var(--font-family);box-sizing:border-box;margin-bottom:16px;">
+            <div style="display:flex;gap:8px;">
+                <button id="dg-weather-clear" style="flex:1;padding:9px;border:1px solid var(--border-color);border-radius:10px;background:var(--secondary-bg);color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">恢复默认</button>
+                <button id="dg-weather-save" style="flex:2;padding:9px;border:none;border-radius:10px;background:var(--accent-color);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-family);">保存</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(wrap);
+
+    var input = document.getElementById('dg-weather-input');
+    if(input) input.focus();
+
+    function close() { wrap.remove(); }
+
+    document.getElementById('dg-weather-close').onclick = close;
+    wrap.onclick = function(e) { if(e.target === wrap) close(); };
+
+    document.getElementById('dg-weather-clear').onclick = function() {
+        localStorage.removeItem(key);
+        if (typeof _buildDailyGreeting === 'function') _buildDailyGreeting();
+        close();
+        if (typeof showNotification === 'function') showNotification('已恢复默认天气', 'success', 1500);
+    };
+
+    document.getElementById('dg-weather-save').onclick = function() {
+        var val = input.value.trim();
+        if (val) {
+            localStorage.setItem(key, val);
+            if (typeof _buildDailyGreeting === 'function') _buildDailyGreeting();
+            close();
+            if (typeof showNotification === 'function') showNotification('天气已更新 ✓', 'success', 1500);
+        } else {
+            if (typeof showNotification === 'function') showNotification('请输入天气内容', 'warning');
+        }
+    };
+};

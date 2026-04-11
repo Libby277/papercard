@@ -1249,7 +1249,10 @@
                 <i class="fas fa-calendar-alt"></i><span>心情与日历</span>
             </div>
             <div id="calendar-container"></div>
-            <div class="modal-buttons">
+            <div class="modal-buttons" style="padding: 14px 16px;">
+                <button class="modal-btn modal-btn-secondary" id="back-advanced" onclick="(function(){hideModal(document.getElementById('calendar-modal'));showModal(document.getElementById('advanced-modal'))})()">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
                 <button class="modal-btn modal-btn-secondary" id="close-calendar">关闭</button>
             </div>
         </div>
@@ -1480,7 +1483,10 @@
                 </div>
                 <div class="favorites-list" id="favorites-list" style="max-height:55vh;overflow-y:auto;"></div>
             </div>
-            <div class="modal-buttons">
+            <div class="modal-buttons" style="padding: 14px 16px;">
+                <button class="modal-btn modal-btn-secondary" id="back-advanced" onclick="(function(){hideModal(document.getElementById('stats-modal'));showModal(document.getElementById('advanced-modal'))})()">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
                 <button class="modal-btn modal-btn-secondary" id="close-stats">关闭</button>
             </div>
         </div>
@@ -1504,8 +1510,10 @@
             </div>
             <div id="fl-panel-fortune" class="fl-panel fl-panel-active">
                 <div id="fortune-content"></div>
-                <div class="modal-buttons" style="margin-top:16px;">
-
+                <div class="modal-buttons" style="padding: 14px 16px;">
+                    <button class="modal-btn modal-btn-secondary" id="back-advanced" onclick="(function(){hideModal(document.getElementById('fortune-lenormand-modal'));showModal(document.getElementById('advanced-modal'))})()">
+                        <i class="fas fa-arrow-left"></i> 返回
+                    </button>
                     <button class="modal-btn modal-btn-secondary" id="close-fortune">关闭</button>
                 </div>
             </div>
@@ -1528,8 +1536,11 @@
                     </div>
                     <div id="lenormand-result" style="display:none;"></div>
                 </div>
-                <div class="modal-buttons" style="margin-top:12px;">
+                <div class="modal-buttons" style="padding: 14px 16px;">
                     <button class="modal-btn modal-btn-secondary" id="lenormand-reset-btn" onclick="resetLenormand()" style="display:none;">重新占卜</button>
+                    <button class="modal-btn modal-btn-secondary" id="back-advanced" onclick="(function(){hideModal(document.getElementById('fortune-lenormand-modal'));showModal(document.getElementById('advanced-modal'))})()">
+                        <i class="fas fa-arrow-left"></i> 返回
+                    </button>
                     <button class="modal-btn modal-btn-secondary" id="close-lenormand">关闭</button>
                 </div>
             </div>
@@ -1553,8 +1564,11 @@
                     </div>
                     <div id="tarot-result" style="display:none;"></div>
                 </div>
-                <div class="modal-buttons" style="margin-top:12px;">
+                <div class="modal-buttons" style="padding: 14px 16px;">
                     <button class="modal-btn modal-btn-secondary" id="tarot-reset-btn" onclick="resetTarotDivination()" style="display:none;">重新占卜</button>
+                    <button class="modal-btn modal-btn-secondary" id="back-advanced" onclick="(function(){hideModal(document.getElementById('fortune-lenormand-modal'));showModal(document.getElementById('advanced-modal'))})()">
+                        <i class="fas fa-arrow-left"></i> 返回
+                    </button>
                     <button class="modal-btn modal-btn-secondary" id="close-tarot-divination">关闭</button>
                 </div>
             </div>
@@ -1568,7 +1582,10 @@
                     <i class="fas fa-moon" style="font-size:32px;opacity:0.3;display:block;margin-bottom:12px;"></i>
                     尚无占卜记录<br><span style="font-size:11px;opacity:0.6;">完成一次占卜后，结果将自动收录于此</span>
                 </div>
-                <div class="modal-buttons" style="margin-top:16px;">
+                <div class="modal-buttons" style="padding: 14px 16px;">
+                    <button class="modal-btn modal-btn-secondary" id="back-advanced" onclick="(function(){hideModal(document.getElementById('fortune-lenormand-modal'));showModal(document.getElementById('advanced-modal'))})()">
+                        <i class="fas fa-arrow-left"></i> 返回
+                    </button>
                     <button class="modal-btn modal-btn-secondary" id="close-divihistory">关闭</button>
                 </div>
             </div>
@@ -1577,50 +1594,29 @@
 
     <div id="lenormand-modal" style="display:none;"></div>
 
-        <!-- 许愿池主弹窗 
-    <div class="modal" id="wishing-pool-modal">
-        <div class="wp-gradient-bar"></div>
-        <div class="modal-content" style="max-height: 85vh; display: flex; flex-direction: column;">-->
+
             <!-- 许愿池主弹窗 -->
 <div class="modal" id="wishing-pool-modal">
     <div class="modal-content" style="max-height: 85vh; padding: 0; overflow: hidden; display: flex; flex-direction: column; border-radius: 20px;">
         <div class="wp-gradient-bar"></div>
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px 10px;">
-                <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-star" style="color: var(--accent-color);"></i> 许愿池
-                </div>
-                <button id="close-wishing-pool" style="background:var(--primary-bg);border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:14px;">✕</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px 10px;">
+            <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-star" style="color: var(--accent-color);"></i> 许愿池
             </div>
-            <div id="wish-pool-grid" class="wp-grid-container" style="flex: 1; overflow-y: auto; padding: 0 15px 15px;"></div>
-            <div style="padding: 10px 15px 15px; border-top: 1px solid var(--border-color);">
-                <button id="add-wish-btn" class="modal-btn modal-btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                    <i class="fas fa-plus"></i> 许个愿
-                </button>
-            </div>
+            <button id="close-wishing-pool" style="background:var(--primary-bg);border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:14px;">✕</button>
+        </div>
+        <div id="wish-pool-grid" class="wp-grid-container" style="flex: 1; overflow-y: auto; padding: 0 15px 15px;"></div>
+        <div class="modal-buttons" style="padding: 14px 16px;">
+            <button class="modal-btn modal-btn-secondary" id="back-advanced" onclick="(function(){hideModal(document.getElementById('wishing-pool-modal'));showModal(document.getElementById('advanced-modal'))})()">
+                <i class="fas fa-arrow-left"></i> 返回
+            </button>
+            <button class="modal-btn modal-btn-primary" id="add-wish-btn" style="flex: 1">
+                <i class="fas fa-plus"></i> 许个愿
+            </button>
+            <button class="modal-btn modal-btn-secondary" id="close-divihistory">关闭</button>
         </div>
     </div>
-
-    <!-- 许愿池编辑弹窗 
-    <div class="modal" id="wish-edit-modal">
-        <div class="modal-content" style="width: 88%; max-width: 360px;">
-            <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; text-align: center;" id="wish-edit-title">许个愿</div>
-            <div class="wp-edit-img-area" id="wish-img-upload-area">
-                <div id="wish-img-placeholder" style="text-align: center; color: var(--text-secondary);"><i class="fas fa-image" style="font-size: 24px; margin-bottom: 6px; display: block;"></i><span style="font-size: 12px;">点击上传图片</span></div>
-                <img id="wish-img-preview" src="" alt="" style="display: none;">
-                <input type="file" id="wish-img-input" accept="image/*" style="display: none;">
-            </div>
-            <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px; background: var(--primary-bg); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 10px 14px;">
-                <span style="color: var(--text-secondary); font-size: 14px;">¥</span>
-                <input type="number" id="wish-price-input" placeholder="物品价格 (选填)" style="flex: 1; border: none; background: transparent; outline: none; color: var(--text-primary); font-size: 14px; font-family: var(--font-family);">
-            </div>
-            <textarea id="wish-my-note-input" placeholder="我的备注 (选填)" rows="3" style="width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1.5px solid var(--border-color); border-radius: 12px; background: var(--primary-bg); color: var(--text-primary); font-size: 13px; font-family: var(--font-family); outline: none; resize: none; margin-bottom: 16px;"></textarea>
-            <textarea id="wish-partner-note-input" placeholder="Ta 的回应 (等ta回应后自动填入，或手动编辑)" rows="3" style="width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1.5px solid var(--border-color); border-radius: 12px; background: var(--primary-bg); color: var(--text-primary); font-size: 13px; font-family: var(--font-family); outline: none; resize: none; margin-bottom: 16px;"></textarea>
-            <div style="display: flex; gap: 10px;">
-                <button id="wish-edit-cancel" class="modal-btn modal-btn-secondary" style="flex: 1;">取消</button>
-                <button id="wish-edit-save" class="modal-btn modal-btn-primary" style="flex: 2;">投入池中 ✨</button>
-            </div>
-        </div>
-    </div>-->
+</div>
         <!-- 许愿池编辑弹窗 -->
     <div class="modal" id="wish-edit-modal">
         <div class="modal-content" style="width: 88%; max-width: 360px;">
@@ -1650,6 +1646,101 @@
         </div>
     </div>
 
+    <!-- 留言板列表 -->
+<div id="envelope-board-modal" class="modal">
+    <div class="modal-content" id="board-v2-list-container">
+        <div class="board-wrapper">
+            <div class="board-header" style="justify-content: space-between; align-items: center;">
+                <div style="display:flex; align-items:center; gap:6px; flex-shrink: 0;">
+                    <i class="fas fa-thumbtack" style="font-size: 14px; color: var(--accent-color);"></i>
+                    <span style="font-weight: 600; font-size: 15px;">留言板</span>
+                </div>
+                <div id="board-tab-area"></div>
+                <div style="display:flex; align-items:center; gap:10px; flex-shrink: 0;">
+                    <button id="board-export-btn" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:13px;" title="导出记录"><i class="fa-solid fa-file-export"></i></button>
+                    <button class="board-close-btn" id="board-list-close-btn"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="board-body" id="board-list-body" style="padding: 14px 16px;"></div>
+            <div class="board-footer" id="board-list-footer">
+                <div class="modal-buttons">
+                    <button class="modal-btn modal-btn-secondary" id="back-advanced" onclick="(function(){hideModal(document.getElementById('envelope-board-modal'));showModal(document.getElementById('advanced-modal'))})()">
+                        <i class="fas fa-arrow-left"></i> 返回
+                    </button>
+                    <button class="modal-btn modal-btn-primary" id="board-new-post-btn" style="flex: 1"><i class="fas fa-plus"></i> 写新留言</button>
+                    <button class="modal-btn modal-btn-secondary" id="close-custom-replies">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 留言板详情 -->
+<div id="board-detail-modal" class="modal">
+    <div class="modal-content" id="board-v2-detail-container">
+        <div class="board-detail-wrapper">
+            <div class="board-detail-header">
+                <button class="board-detail-back" id="board-detail-back-btn"><i class="fas fa-arrow-left"></i></button>
+                <div class="board-detail-title">留言详情</div>
+                <div class="board-detail-actions">
+                <button class="board-detail-action-btn" id="board-global-edit-btn" title="全部编辑"><i class="fas fa-pen"></i></button>
+                <button class="board-detail-action-btn delete" id="board-delete-thread-btn"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+            <div class="board-paper">
+            <div class="board-paper-top-line"></div>
+            <div class="board-paper-content" id="board-detail-body"></div>
+                <div id="board-edit-actions-bar" style="display:none; margin-top:24px; padding-top:16px; border-top:1px dashed var(--border-color); gap:10px; justify-content:flex-end; display:none;">
+                    <button class="board-compose-btn cancel" id="board-edit-cancel-btn">取消</button>
+                    <button class="board-compose-btn send" id="board-edit-save-btn">保存</button>
+                </div>
+                <div class="board-detail-date" id="board-detail-date"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 留言板撰写 -->
+<div id="board-compose-modal" class="modal">
+  <div class="modal-content" id="board-v2-compose-container">
+    <div class="board-compose-wrapper">
+      <div class="board-compose-header">
+        <div class="board-compose-title"><i class="fas fa-pen-fancy"></i><span id="board-compose-title-text">写新留言</span></div>
+        <button class="board-compose-close" id="board-compose-close-btn"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="board-compose-paper">
+        <textarea id="bv2-compose-text" placeholder="写下你的碎碎念..." style="background:transparent!important;border:none!important;outline:none!important;font-family:var(--font-family)!important;font-size:14px!important;line-height:29px!important;color:var(--text-primary)!important;width:100%;resize:none;padding:14px 16px 14px 50px;min-height:180px;position:relative;z-index:1;"></textarea>
+      </div>
+      <div style="padding:0 16px 10px;display:flex;justify-content:space-between;align-items:center;">
+        <label style="cursor:pointer;color:var(--text-secondary);font-size:18px;">
+          <i class="fas fa-image"></i>
+          <input type="file" accept="image/*" id="bv2-compose-img-input" style="display:none;">
+          <input type="file" accept="image/*" id="bv2-detail-img-input" style="display:none;">
+        </label>
+        <span id="bv2-img-hint" style="font-size:11px;color:var(--accent-color);display:none;">已选图片</span>
+      </div>
+      <div class="board-compose-footer">
+        <button class="board-compose-btn cancel" id="board-compose-cancel-btn">取消</button>
+        <button class="board-compose-btn send" id="board-compose-send-btn">发布</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 图片编辑选择框 -->
+<div id="board-img-action-modal" class="modal" style="align-items: center;">
+  <div style="background:var(--primary-bg); border-radius:16px; padding:24px; width:min(300px, 85vw); box-shadow: 0 10px 40px rgba(0,0,0,0.3); border:1px solid var(--border-color); text-align:center;">
+    <p style="margin:0 0 20px 0; font-size:15px; font-weight:600; color:var(--text-primary); font-family:var(--font-family);">选择图片操作</p>
+    <div style="display:flex; gap:12px; justify-content:center;">
+      <button id="board-img-replace-action" style="flex:1; padding:10px; border:none; border-radius:10px; background:var(--accent-color); color:#fff; font-size:14px; font-weight:600; cursor:pointer; font-family:var(--font-family);">替换图片</button>
+      <button id="board-img-delete-action" style="flex:1; padding:10px; border:1px solid #ff4757; border-radius:10px; background:transparent; color:#ff4757; font-size:14px; font-weight:600; cursor:pointer; font-family:var(--font-family);">删除图片</button>
+    </div>
+    <button id="board-img-action-cancel" style="margin-top:16px; background:none; border:none; color:var(--text-secondary); font-size:13px; cursor:pointer; font-family:var(--font-family);">取消</button>
+  </div>
+</div>
+
+<!-- 隐藏的文件选择器(给详情页替换用) -->
+<input type="file" accept="image/*" id="bv2-detail-img-input" style="display:none;">
 
     <!-- 月经记录模态框 -->
     <div class="modal" id="period-modal">
@@ -1736,7 +1827,10 @@
                 </div>
             </div>
             
-            <div class="modal-buttons">
+            <div class="modal-buttons" style="padding: 14px 16px;">
+                <button class="modal-btn modal-btn-secondary" id="back-advanced" onclick="(function(){hideModal(document.getElementById('period-modal'));showModal(document.getElementById('advanced-modal'))})()">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
                 <button class="modal-btn modal-btn-secondary" id="close-period">关闭</button>
             </div>
         </div>
@@ -2015,7 +2109,10 @@
                 </div>
     
                 <div class="modal-buttons">
-                    <button class="modal-btn modal-btn-primary" id="add-custom-reply" style="flex: 1;">
+                    <button class="modal-btn modal-btn-secondary" id="back-advanced" onclick="(function(){hideModal(document.getElementById('custom-replies-modal'));showModal(document.getElementById('advanced-modal'))})()">
+                        <i class="fas fa-arrow-left"></i> 返回
+                    </button>                    
+                    <button class="modal-btn modal-btn-primary" id="add-custom-reply" style="flex: 1">
                         <i class="fas fa-plus"></i> 新增
                     </button>
                     <button class="modal-btn modal-btn-secondary" id="close-custom-replies">关闭</button>
@@ -2089,11 +2186,14 @@
             <div class="ann-list-container" id="ann-list-container">
             </div>
 
-            <div class="ann-footer">
-                <button class="modal-btn modal-btn-secondary" id="close-anniversary-modal">关闭</button>
+            <div class="ann-footer" style="padding: 14px 16px;">
+                <button class="modal-btn modal-btn-secondary" id="back-advanced" onclick="(function(){hideModal(document.getElementById('anniversary-modal'));showModal(document.getElementById('advanced-modal'))})()">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>                
                 <button class="modal-btn modal-btn-primary" id="open-ann-add-btn" style="flex: 1;">
                     <i class="fas fa-plus"></i> 新增重要日
                 </button>
+                <button class="modal-btn modal-btn-secondary" id="close-anniversary-modal">关闭</button>
             </div>
 
             <!-- 编辑面板 -->
@@ -2250,7 +2350,10 @@
                     <p>自定义选项随机抽取</p>
                 </div>
             </div>
-            <div class="modal-buttons">
+            <div class="modal-buttons" style="padding: 14px 16px;">
+                <button class="modal-btn modal-btn-secondary" id="back-advanced" onclick="(function(){hideModal(document.getElementById('decision-menu-modal'));showModal(document.getElementById('advanced-modal'))})()">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
                 <button class="modal-btn modal-btn-secondary" id="close-decision-menu">关闭</button>
             </div>
         </div>

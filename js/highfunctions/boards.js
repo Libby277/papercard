@@ -147,14 +147,14 @@ function checkStatus() {
           thread.replies.push(...reply); delete thread.expectedReplyTime; thread.unread = true; // 标记这条留言有未读回复
           saveData();
           if (currentThreadId === thread.id) setTimeout(() => openDetail(thread.id, currentView), 1000);
-          else needRefreshList = true;
+          //else needRefreshList = true;
         }
       }
     });
   };
     processReplies(boardData.myThreads);
     processReplies(boardData.partnerThreads);
-  if (needRefreshList && document.getElementById('envelope-board-modal')?.style.display === 'flex') switchTab(currentView);
+  //if (needRefreshList && document.getElementById('envelope-board-modal')?.style.display === 'flex') switchTab(currentView);
       if (boardData.settings.autoPostEnabled && (typeof settings === 'undefined' || settings.boardPartnerWriteEnabled)) {
         if (!boardData.settings.nextAutoPostTime || now >= boardData.settings.nextAutoPostTime) {
           boardData.settings.nextAutoPostTime = now + (4 * 3600 * 1000);
@@ -224,15 +224,15 @@ function checkStatus() {
 
   return resultArray.length > 0 ? resultArray : null;
 }*/
-function generatePartnerReply() {
-    const pool = boardData.boardReplyPool;
+/*function generatePartnerReply() {
+     const pool = boardData.boardReplyPool;
     const stickers = (typeof stickerLibrary !== 'undefined' && stickerLibrary.length > 0) ? [...stickerLibrary] : [];
     const emojis = (typeof customEmojis !== 'undefined' && customEmojis.length > 0) ? [...customEmojis] : [];
     if (pool.length === 0 && stickers.length === 0) return null;
 
     const punctuations = ['。', '！', '…', '～', '，', '、'];
 
-    // 1. 拼文本
+   // 1. 拼文本
     const count = 8 + Math.floor(Math.random() * 5);
     const uniquePool = getUniqueShuffled(pool, count);
     let text = uniquePool.map(s => s + punctuations[Math.floor(Math.random() * punctuations.length)]).join('');
@@ -263,63 +263,187 @@ function generatePartnerReply() {
     };
 
     return [replyObj]; // ✅ 返回只包含1个对象的数组
+
+  // 1. 拆分出句子（按标点符号断句，保留标点）
+  const count = 8 + Math.floor(Math.random() * 5);
+  const uniquePool = getUniqueShuffled(pool, count);
+  const punctuations = ['。', '！', '…', '～', '，', '、'];
+  const rawSentences = uniquePool.map(s => s + punctuations[Math.floor(Math.random() * punctuations.length)]);
+
+  // 2. 留言板专属 Emoji 策略（模拟活人打字节奏）
+  let finalText = '';
+  const hasStickers = pickedStickers.length > 0;
+  // 决定这一整段留言里，最多能加几个 Emoji
+  const maxEmoji = hasStickers ? 1 : 4; 
+  let usedEmoji = 0;
+
+  // 70% 概率开启“加表情模式”
+  if (emojis.length > 0 && Math.random() < 0.7) {
+    // 遍历所有句子，随机决定哪一句加表情
+    rawSentences.forEach((sentence, index) => {
+      finalText += sentence;
+      
+      // 如果还没用完配额，这一句有 35% 的机会获得 Emoji
+      if (usedEmoji < maxEmoji && Math.random() < 0.35) {
+        const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+        finalText += emoji;
+        usedEmoji++;
+      }
+    });
+  } else {
+    // 没触发表情模式，纯文字拼接
+    finalText = rawSentences.join('');
+  }
+
+  // 3. 统一合并成【唯一的】一条回复消息
+  const replyObj = {
+    id: genId(),
+    sender: 'partner',
+    text: finalText,
+    image: null,
+    sticker: null,
+    stickers: pickedStickers,
+    timestamp: Date.now()
+  };
+  return [replyObj];
+
+}*/
+
+function generatePartnerReply() {
+    const pool = boardData.boardReplyPool;
+    const stickers = (typeof stickerLibrary !== 'undefined' && stickerLibrary.length > 0) ? [...stickerLibrary] : [];
+    const emojis = (typeof customEmojis !== 'undefined' && customEmojis.length > 0) ? [...customEmojis] : [];
+    if (pool.length === 0 && stickers.length === 0) return null;
+
+    // 1. 拆分出句子（按标点符号断句，保留标点）
+    const count = 8 + Math.floor(Math.random() * 5);
+    const uniquePool = getUniqueShuffled(pool, count);
+    const punctuations = ['。', '！', '…', '～', '，', '、'];
+    const rawSentences = uniquePool.map(s => s + punctuations[Math.floor(Math.random() * punctuations.length)]);
+
+    // 2. 先决定这一条留言带不带表情包（必须放在前面，因为后面算 Emoji 配额要用到）
+    let pickedStickers = [];
+    if (stickers.length > 0 && Math.random() < 0.35) {
+        const stickerCount = Math.random() < 0.5 ? 1 : 2;
+        pickedStickers = getUniqueShuffled(stickers, stickerCount);
+    }
+
+    // 3. 留言板专属 Emoji 策略（模拟活人打字节奏）
+    let finalText = '';
+    const hasStickers = pickedStickers.length > 0;
+    // 决定这一整段留言里，最多能加几个 Emoji（有表情包就最多1个，没有就最多4个）
+    const maxEmoji = hasStickers ? 1 : 3; 
+    let usedEmoji = 0;
+
+    // 70% 概率开启“加表情模式”
+    if (emojis.length > 0 && Math.random() < 0.7) {
+        // 遍历所有句子，随机决定哪一句加表情
+        rawSentences.forEach((sentence) => {
+            finalText += sentence;
+            
+            // 如果还没用完配额，这一句有 35% 的机会获得 Emoji
+            if (usedEmoji < maxEmoji && Math.random() < 0.35) {
+                const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+                finalText += emoji;
+                usedEmoji++;
+            }
+        });
+    } else {
+        // 没触发表情模式，纯文字拼接
+        finalText = rawSentences.join('');
+    }
+
+    // 4. 统一合并成【唯一的】一条回复消息
+    const replyObj = { 
+        id: genId(), 
+        sender: 'partner', 
+        text: finalText, 
+        image: null, 
+        sticker: null, 
+        stickers: pickedStickers, 
+        timestamp: Date.now() 
+    };
+    return [replyObj]; 
 }
 
 
-// ==========================================
-// 关键修复：不创建新模态框，寄生原系统节点
-// ==========================================
-// ==========================================
-// 关键修复：具备自举能力，没有壳就自己建
-// ==========================================
 function initModals() {
-  // 1. 列表框
-  let listModal = document.getElementById('envelope-board-modal');
-  if (!listModal) {
-    listModal = document.createElement('div');
-    listModal.id = 'envelope-board-modal';
-    listModal.className = 'modal'; // 必须加这个class，原系统CSS才认
-    listModal.innerHTML = '<div class="modal-content" id="board-v2-list-container"></div>';
-    document.body.appendChild(listModal);
-  } else {
-    if (!document.getElementById('board-v2-list-container')) {
-      const old = listModal.querySelector('.modal-content');
-      if (old) old.id = 'board-v2-list-container';
-      else { const c = document.createElement('div'); c.id = 'board-v2-list-container'; listModal.appendChild(c); }
-    }
-  }
+  // 全部静态写在 index.html 了，只绑定事件
+  bindStaticEvents();
+}
 
-  // 2. 详情框
-  let detailModal = document.getElementById('board-detail-modal');
-  if (!detailModal) {
-    detailModal = document.createElement('div');
-    detailModal.id = 'board-detail-modal';
-    detailModal.className = 'modal';
-    detailModal.innerHTML = '<div class="modal-content" id="board-v2-detail-container"></div>';
-    document.body.appendChild(detailModal);
-  } else {
-    if (!document.getElementById('board-v2-detail-container')) {
-      const old = detailModal.querySelector('.modal-content');
-      if (old) old.id = 'board-v2-detail-container';
-      else { const c = document.createElement('div'); c.id = 'board-v2-detail-container'; detailModal.appendChild(c); }
-    }
-  }
+function bindStaticEvents() {
+  // --- 列表层 ---
+  document.getElementById('board-list-close-btn').onclick = () => hideModal(document.getElementById('envelope-board-modal'));
+  document.getElementById('board-export-btn').onclick = () => window._bv2_exportTxt(currentView);
+  document.getElementById('board-new-post-btn').onclick = () => window._bv2_openCompose('new', null, 'me');
 
-  // 3. 撰写框
-  let composeModal = document.getElementById('board-compose-modal');
-  if (!composeModal) {
-    composeModal = document.createElement('div');
-    composeModal.id = 'board-compose-modal';
-    composeModal.className = 'modal';
-    composeModal.innerHTML = '<div class="modal-content" id="board-v2-compose-container"></div>';
-    document.body.appendChild(composeModal);
-  } else {
-    if (!document.getElementById('board-v2-compose-container')) {
-      const old = composeModal.querySelector('.modal-content');
-      if (old) old.id = 'board-v2-compose-container';
-      else { const c = document.createElement('div'); c.id = 'board-v2-compose-container'; composeModal.appendChild(c); }
+  // --- 详情层 ---
+  document.getElementById('board-detail-back-btn').onclick = () => {
+    hideModal(document.getElementById('board-detail-modal'));
+    showModal(document.getElementById('envelope-board-modal'));
+  };
+  document.getElementById('board-global-edit-btn').onclick = () => window._bv2_toggleGlobalEdit();
+  document.getElementById('board-delete-thread-btn').onclick = () => {
+    if (currentThreadId) window._bv2_deleteThread(currentThreadId, currentView);
+  };
+  document.getElementById('board-edit-cancel-btn').onclick = () => window._bv2_cancelGlobalEdit();
+  document.getElementById('board-edit-save-btn').onclick = () => window._bv2_saveGlobalEdit();
+
+  // --- 撰写层 ---
+  document.getElementById('board-compose-close-btn').onclick = () => {
+    hideModal(document.getElementById('board-compose-modal'));
+    showModal(document.getElementById('board-detail-modal'));
+  };
+  document.getElementById('board-compose-cancel-btn').onclick = () => {
+    hideModal(document.getElementById('board-compose-modal'));
+    showModal(document.getElementById('board-detail-modal'));
+  };
+  document.getElementById('board-compose-send-btn').onclick = () => window._bv2_submitPost();
+  document.getElementById('bv2-compose-img-input').onchange = (e) => window._bv2_handleImgSelect(e);
+
+  // --- 图片操作框事件 ---
+  document.getElementById('board-img-action-cancel').onclick = () => hideModal(document.getElementById('board-img-action-modal'));
+  document.getElementById('board-img-replace-action').onclick = () => {
+    hideModal(document.getElementById('board-img-action-modal'));
+    if (window._bv2_pendingImgId) {
+      document.getElementById('bv2-detail-img-input').click();
     }
-  }
+  };
+  document.getElementById('board-img-delete-action').onclick = () => {
+    hideModal(document.getElementById('board-img-action-modal'));
+    if (window._bv2_pendingImgId && confirm('确定要删除这张图片吗？')) {
+      if (!window._bv2_imgEdits) window._bv2_imgEdits = {};
+      window._bv2_imgEdits[window._bv2_pendingImgId] = { action: 'delete' };
+      const imgEl = document.getElementById(`bv2-img-${window._bv2_pendingImgId}`);
+      if (imgEl) imgEl.style.display = 'none';
+      window._bv2_pendingImgId = null;
+    }
+  };
+
+  // --- 详情页替换图片用的文件选择器 ---
+  document.getElementById('bv2-detail-img-input').onchange = async function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    let base64 = '';
+    if (typeof optimizeImage === 'function') {
+      base64 = await optimizeImage(file);
+    } else {
+      base64 = await new Promise(resolve => {
+        const r = new FileReader();
+        r.onload = ev => resolve(ev.target.result);
+        r.readAsDataURL(file);
+      });
+    }
+    if (window._bv2_pendingImgId) {
+      if (!window._bv2_imgEdits) window._bv2_imgEdits = {};
+      window._bv2_imgEdits[window._bv2_pendingImgId] = { action: 'replace', data: base64 };
+      const imgEl = document.querySelector(`#bv2-img-${window._bv2_pendingImgId} img`);
+      if (imgEl) imgEl.src = base64;
+      window._bv2_pendingImgId = null;
+    }
+    e.target.value = '';
+  };
 }
 
 
@@ -338,161 +462,140 @@ window.renderEnvelopeBoard = async function() {
 
 // --- UI 渲染层 (列表) ---
 function switchTab(type) {
-    const canViewPartner = typeof settings !== 'undefined' && settings.boardPartnerWriteEnabled;
-    if (!canViewPartner) {
-        type = 'me';
-    }
+  const canViewPartner = typeof settings !== 'undefined' && settings.boardPartnerWriteEnabled;
+  if (!canViewPartner) type = 'me';
   currentView = type;
-  const container = document.getElementById('board-v2-list-container');
-  if (!container) return;
+
   const isMe = type === 'me';
   const threads = isMe ? boardData.myThreads : boardData.partnerThreads;
   const myName = (typeof settings !== 'undefined' && settings.myName) || '我';
   const partnerName = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
-  const s = boardData.settings;
 
-    container.innerHTML = `
-    <div class="board-wrapper">
-        <div class="board-header" style="justify-content: space-between; align-items: center;">
-        <!-- 左边：图钉 + 标题 -->
-        <div style="display:flex; align-items:center; gap:6px; flex-shrink: 0;">
-            <i class="fas fa-thumbtack" style="font-size: 14px; color: var(--accent-color);"></i>
-            <span style="font-weight: 600; font-size: 15px;"> 留言板</span>
-        </div>
+  // --- 标签区 ---
+  const tabArea = document.getElementById('board-tab-area');
+  if (canViewPartner) {
+    tabArea.innerHTML = `
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="board-tab-btn ${isMe ? 'active' : ''}" data-tab="me" style="padding:6px 14px; border-radius:20px; border:1px solid var(--border-color); background:${isMe ? 'var(--accent-color)' : 'transparent'}; color:${isMe ? '#fff' : 'var(--text-secondary)'}; font-size:12px; font-weight:600; cursor:pointer; position:relative;">
+          ${myName}${boardData.myThreads.some(t => t.unread) ? '<span style="position:absolute;top:-6px;right:-6px;font-size:14px;">✨</span>' : ''}
+        </button>
+        <button class="board-tab-btn ${!isMe ? 'active' : ''}" data-tab="partner" style="padding:6px 14px; border-radius:20px; border:1px solid var(--border-color); background:${!isMe ? 'var(--accent-color)' : 'transparent'}; color:${!isMe ? '#fff' : 'var(--text-secondary)'}; font-size:12px; font-weight:600; cursor:pointer; position:relative;">
+          ${partnerName}${boardData.partnerThreads.some(t => t.unread) ? '<span style="position:absolute;top:-6px;right:-6px;font-size:14px;">✨</span>' : ''}
+        </button>
+      </div>`;
+    tabArea.querySelectorAll('[data-tab]').forEach(btn => {
+      btn.onclick = () => switchTab(btn.dataset.tab);
+    });
+  } else {
+    tabArea.innerHTML = '';
+  }
 
-        <!-- 中间：人物切换 (仅开启主动留言时显示) -->
-        ${canViewPartner ? `
-        <div style="display:flex; gap:8px; align-items:center;">
-          <button class="board-tab-btn ${isMe ? 'active' : ''}" onclick="window._bv2_switchTab('me')" style="padding:6px 14px; border-radius:20px; border:1px solid var(--border-color); background:${isMe ? 'var(--accent-color)' : 'transparent'}; color:${isMe ? '#fff' : 'var(--text-secondary)'}; font-size:12px; font-weight:600; cursor:pointer; position:relative;">
-            ${myName}
-            ${boardData.myThreads.some(t => t.unread) ? `<span style="position:absolute;top:-6px;right:-6px;font-size:14px;">✨</span>` : ''}
-          </button>
-          <button class="board-tab-btn ${!isMe ? 'active' : ''}" onclick="window._bv2_switchTab('partner')" style="padding:6px 14px; border-radius:20px; border:1px solid var(--border-color); background:${!isMe ? 'var(--accent-color)' : 'transparent'}; color:${!isMe ? '#fff' : 'var(--text-secondary)'}; font-size:12px; font-weight:600; cursor:pointer; position:relative;">
-            ${partnerName}
-            ${boardData.partnerThreads.some(t => t.unread) ? `<span style="position:absolute;top:-6px;right:-6px;font-size:14px;">✨</span>` : ''}
-          </button>
-        </div>
-        ` : '<div></div>'}
+  // --- 列表内容 ---
+  const listBody = document.getElementById('board-list-body');
+  const listFooter = document.getElementById('board-list-footer');
+  if (threads.length === 0) {
+    listBody.innerHTML = `<div class="board-empty"><i class="fas fa-sticky-note"></i><p>${isMe ? '还没有留言' : 'Ta还没有主动留言'}</p></div>`;
+  } else {
+    listBody.innerHTML = threads.slice().reverse().map(t => {
+      const last = t.replies[t.replies.length - 1];
+      let statusText = '等待回复', statusClass = 'pending';
+      if (last && ((isMe && last.sender === 'partner') || (!isMe && last.sender === 'me'))) {
+        statusText = '已回复'; statusClass = 'replied';
+      }
+      const preview = t.replies[0] ? (t.replies[0].image ? '🖼 图片留言' : escapeHtml((t.replies[0].text || '').substring(0, 40))) : '';
+      const unreadStar = t.unread ? '<span style="position:absolute;top:12px;right:12px;font-size:14px;z-index:2;">✨</span>' : '';
+      return `<div class="board-card" data-thread-id="${t.id}" style="position:relative;cursor:pointer;">${unreadStar}<div class="board-card-top-line"></div><div class="board-card-body"><div class="board-card-preview">${preview}</div><div class="board-card-meta"><span class="board-card-date">${formatTime(t.createdAt)}</span><span class="board-card-status ${statusClass}">${statusText}</span></div></div></div>`;
+    }).join('');
+    listBody.querySelectorAll('[data-thread-id]').forEach(card => {
+      card.onclick = () => window._bv2_openDetail(card.dataset.threadId, currentView);
+    });
+  }
 
-
-        <!-- 右边：导出 + 关闭 -->
-        <div style="display:flex; align-items:center; gap:10px; flex-shrink: 0;">
-            <button onclick="window._bv2_exportTxt('${type}')" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:13px;" title="导出记录"><i class="fa-solid fa-file-export"></i></button>
-            <button class="board-close-btn" onclick="hideModal(document.getElementById('envelope-board-modal'))"><i class="fas fa-times"></i></button>
-        </div>
-    </div>
-    <div class="board-body" style="padding: 14px 16px;">
-      ${threads.length === 0 ? `<div class="board-empty"><i class="fas fa-sticky-note"></i><p>${isMe ? '还没有留言' : 'Ta还没有主动留言'}</p></div>` : threads.slice().reverse().map(t => {
-        const last = t.replies[t.replies.length - 1];
-        let statusText = '等待回复', statusClass = 'pending';
-        if (last && ((isMe && last.sender === 'partner') || (!isMe && last.sender === 'me'))) { statusText = '已回复'; statusClass = 'replied'; }
-        const preview = t.replies[0] ? (t.replies[0].image ? '🖼 图片留言' : escapeHtml((t.replies[0].text||'').substring(0, 40))) : '';
-        //return `<div class="board-card" onclick="window._bv2_openDetail('${t.id}','${type}')"><div class="board-card-top-line"></div>
-        const unreadStar = t.unread ? `<span style="position:absolute;top:12px;right:12px;font-size:14px;z-index:2;">✨</span>` : '';
-        return `<div class="board-card" onclick="window._bv2_openDetail('${t.id}','${type}')" style="position:relative;">${unreadStar}<div class="board-card-top-line"></div>
-        <div class="board-card-body"><div class="board-card-preview">${preview}</div><div class="board-card-meta"><span class="board-card-date">${formatTime(t.createdAt)}</span><span class="board-card-status ${statusClass}">${statusText}</span></div></div></div>`;
-      }).join('')}
-    </div>
-    <div class="board-footer">${isMe ? `<button class="board-add-btn" onclick="window._bv2_openCompose('new',null,'me')"><i class="fas fa-plus"></i> 写新留言</button>` : ''}</div>
-  </div>`;
-
+  // --- 底部按钮 ---
+  listFooter.style.display = isMe ? '' : 'none';
 }
 
 
-// --- UI 渲染层 (详情、撰写、导出) ---
 function openDetail(threadId, type) {
   currentThreadId = threadId;
   const threads = type === 'me' ? boardData.myThreads : boardData.partnerThreads;
   const thread = threads.find(t => t.id === threadId);
   if (!thread) return;
-  // 看了就标记为已读，去掉星星
   if (thread.unread) {
     thread.unread = false;
     saveData();
-    // 刷新列表，把列表上的星星也立刻去掉
-    if (document.getElementById('envelope-board-modal')?.style.display === 'flex') {
-      switchTab(currentView);
-    }
+    if (document.getElementById('envelope-board-modal')?.style.display !== 'none') switchTab(currentView);
   }
-
   const myName = (typeof settings !== 'undefined' && settings.myName) || '我';
   const partnerName = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
   const isMe = type === 'me';
+
+  restoreDetailViewUI();
+
   let bodyHtml = '';
-    thread.replies.forEach((r, idx) => {
-      const isSenderMe = r.sender === 'me';
-      const isStarter = (idx === 0); // 第一条永远是主留言
-      
-      let cHtml = '';
-      // 1. 先渲染文字和图片
-      if (r.text) cHtml += `<div class="${isSenderMe ? 'board-user-text' : 'board-reply-text'}" id="bv2-text-${r.id}">${escapeHtml(r.text)}</div>`;
-      if (r.image) cHtml += `<img src="${r.image}" style="max-width:150px;border-radius:8px;display:block;margin-bottom:8px;margin-left:40px;cursor:pointer;" onclick="viewImage('${r.image}')">`;
-      //if (r.sticker) cHtml += `<img src="${r.sticker}" style="max-width:120px;border-radius:8px;display:block;margin-top:8px;margin-left:40px;">`;
-      //if (r.text) cHtml += `<div class="${isSenderMe ? 'board-user-text' : 'board-reply-text'}" id="bv2-text-${r.id}">${escapeHtml(r.text)}</div>`;
-              
-        // 2. 再渲染表情包（保证在文字后面）
-        // 兼容老的单个sticker格式
-        if (r.sticker) cHtml += `<img src="${r.sticker}" style="max-width:120px;border-radius:8px;display:block;margin-top:8px;margin-left:40px;">`;
-        
-        // 渲染新的多个 stickers 数组（用一个 flex 容器实现横向排列）
-        if (r.stickers && r.stickers.length > 0) {
-            cHtml += `<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; margin-left:40px;">`;
-            r.stickers.forEach(st => {
-                cHtml += `<img src="${st}" style="max-width:120px; max-height:120px; border-radius:8px;">`;
-            });
-            cHtml += `</div>`;
-        }
-
-
-      // 样式和文案修复：第一条永远是有颜色的"留言"，后面的永远是"回复"
-      const sectionClass = isStarter ? 'board-user-section' : 'board-reply-section';
-      const labelClass = isStarter ? 'board-user-label' : 'board-reply-label';
-      const labelText = isStarter ? ' 的留言' : ' 的回复';
-      const senderName = isSenderMe ? myName : partnerName;
-
-      bodyHtml += `<div class="${sectionClass}" id="bv2-section-${r.id}"><div class="${labelClass}">${senderName}${labelText}</div>${cHtml}</div>`;
-    });
+  thread.replies.forEach((r, idx) => {
+    const isSenderMe = r.sender === 'me';
+    const isStarter = idx === 0;
+    let cHtml = '';
+    if (r.text) cHtml += `<div class="${isSenderMe ? 'board-user-text' : 'board-reply-text'}" id="bv2-text-${r.id}">${escapeHtml(r.text)}</div>`;
+    if (r.image) cHtml += `<div id="bv2-img-${r.id}" style="display:inline-block; position:relative; margin-bottom:8px; margin-left:40px;"><img src="${r.image}" style="max-width:150px;border-radius:8px;display:block;cursor:pointer;" onclick="viewImage('${r.image}')"></div>`;
+    if (r.sticker) cHtml += `<img src="${r.sticker}" style="max-width:120px;border-radius:8px;display:block;margin-top:8px;margin-left:40px;">`;
+    if (r.stickers && r.stickers.length > 0) {
+      cHtml += '<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; margin-left:40px;">';
+      r.stickers.forEach(st => { cHtml += `<img src="${st}" style="max-width:120px; max-height:120px; border-radius:8px;">`; });
+      cHtml += '</div>';
+    }
+    const sectionClass = isStarter ? 'board-user-section' : 'board-reply-section';
+    const labelClass = isStarter ? 'board-user-label' : 'board-reply-label';
+    const labelText = isStarter ? ' 的留言' : ' 的回复';
+    const senderName = isSenderMe ? myName : partnerName;
+    bodyHtml += `<div class="${sectionClass}" id="bv2-section-${r.id}"><div class="${labelClass}">${senderName}${labelText}</div>${cHtml}</div>`;
+  });
 
   const last = thread.replies[thread.replies.length - 1];
   let actionHtml = '';
   if (last) {
-    if (isMe && last.sender === 'partner') actionHtml = `<button class="board-add-btn" style="margin-top:16px;" onclick="window._bv2_openCompose('continue','${threadId}','me')"><i class="fas fa-pen"></i> 继续留言</button>`;
-    else if (!isMe && last.sender === 'partner') actionHtml = `<button class="board-add-btn" style="margin-top:16px;" onclick="window._bv2_openCompose('reply','${threadId}','partner')"><i class="fas fa-reply"></i> 回复</button>`;
+    if (isMe && last.sender === 'partner') actionHtml = `<button class="board-add-btn" style="margin-top:16px;" id="board-continue-btn"><i class="fas fa-pen"></i> 继续留言</button>`;
+    else if (!isMe && last.sender === 'partner') actionHtml = `<button class="board-add-btn" style="margin-top:16px;" id="board-reply-btn"><i class="fas fa-reply"></i> 回复</button>`;
     else actionHtml = `<div class="board-waiting-reply" style="margin-top:16px;"><i class="fas fa-hourglass-half"></i> 等待回复中...</div>`;
   }
-  document.getElementById('board-v2-detail-container').innerHTML = `
-  <div class="board-detail-wrapper">
-    <div class="board-detail-header">
-      <button class="board-detail-back" onclick="hideModal(document.getElementById('board-detail-modal'))"><i class="fas fa-arrow-left"></i></button>
-      <div class="board-detail-title">留言详情</div>
-      <div class="board-detail-actions">
-          <button class="board-detail-action-btn" onclick="window._bv2_toggleGlobalEdit()" title="全部编辑"><i class="fas fa-pen"></i></button>
-          <button class="board-detail-action-btn delete" onclick="window._bv2_deleteThread('${threadId}','${type}')"><i class="fas fa-trash"></i></button>
-      </div>
-    </div>
-    <div class="board-paper"><div class="board-paper-top-line"></div>
-      <div class="board-paper-content">${bodyHtml}${actionHtml}
-        <div id="board-edit-actions-bar" style="display:none; margin-top:24px; padding-top:16px; border-top:1px dashed var(--border-color); gap:10px; justify-content:flex-end;">
-          <button class="board-compose-btn cancel" onclick="window._bv2_cancelGlobalEdit()">取消</button>
-          <button class="board-compose-btn send" onclick="window._bv2_saveGlobalEdit()">保存</button>
-        </div>
-        <div class="board-detail-date">
-        ${new Date(thread.createdAt).toLocaleDateString('zh-CN', {year:'numeric',month:'long',day:'numeric',weekday:'long'})}
-        </div>
-      </div>
-    </div>
-  </div>`;
-  
+
+  document.getElementById('board-detail-body').innerHTML = bodyHtml + actionHtml;
+  document.getElementById('board-detail-date').textContent = new Date(thread.createdAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+
+  const continueBtn = document.getElementById('board-continue-btn');
+  const replyBtn = document.getElementById('board-reply-btn');
+  if (continueBtn) continueBtn.onclick = () => window._bv2_openCompose('continue', threadId, 'me');
+  if (replyBtn) replyBtn.onclick = () => window._bv2_openCompose('reply', threadId, 'partner');
+
+  // ✅ 核心修复：必须用系统的 showModal/hideModal，否则打不过 CSS 的 !important
   hideModal(document.getElementById('envelope-board-modal'));
-  setTimeout(() => { showModal(document.getElementById('board-detail-modal')); const p = document.querySelector('.board-paper'); if(p) p.scrollTop = p.scrollHeight; }, 200);
+  setTimeout(() => {
+    showModal(document.getElementById('board-detail-modal'));
+    const p = document.querySelector('.board-paper');
+    if (p) p.scrollTop = p.scrollHeight;
+  }, 100);
 }
 
 function openCompose(mode, threadId, type) {
-  currentComposeMode = mode; currentThreadId = threadId; currentComposeType = type; selectedImage = null;
-  document.getElementById('board-v2-compose-container').innerHTML = `<div class="board-compose-wrapper"><div class="board-compose-header"><div class="board-compose-title"><i class="fas fa-pen-fancy"></i><span>${mode==='new'?'写新留言':(mode==='continue'?'继续留言':'回复Ta')}</span></div><button class="board-compose-close" onclick="hideModal(document.getElementById('board-compose-modal'))"><i class="fas fa-times"></i></button></div><div class="board-compose-paper"><textarea id="bv2-compose-text" placeholder="写下你的碎碎念..." style="background:transparent!important;border:none!important;outline:none!important;font-family:var(--font-family)!important;font-size:14px!important;line-height:29px!important;color:var(--text-primary)!important;width:100%;resize:none;padding:14px 16px 14px 50px;min-height:180px;position:relative;z-index:1;"></textarea></div><div style="padding:0 16px 10px;display:flex;justify-content:space-between;align-items:center;"><label style="cursor:pointer;color:var(--text-secondary);font-size:18px;"><i class="fas fa-image"></i><input type="file" accept="image/*" id="bv2-compose-img-input" style="display:none;" onchange="window._bv2_handleImgSelect(event)"></label><span id="bv2-img-hint" style="font-size:11px;color:var(--accent-color);display:none;">已选图片</span></div><div class="board-compose-footer"><button class="board-compose-btn cancel" onclick="hideModal(document.getElementById('board-compose-modal'))">取消</button><button class="board-compose-btn send" onclick="window._bv2_submitPost()">发布</button></div></div>`;
+  currentComposeMode = mode;
+  currentThreadId = threadId;
+  currentComposeType = type;
+  selectedImage = null;
+  const titleMap = { new: '写新留言', continue: '继续留言', reply: '回复Ta' };
+  document.getElementById('board-compose-title-text').textContent = titleMap[mode] || '写新留言';
+  document.getElementById('bv2-compose-text').value = '';
+  document.getElementById('bv2-img-hint').style.display = 'none';
+  document.getElementById('bv2-compose-img-input').value = '';
+
+  // ✅ 核心修复
   hideModal(document.getElementById('board-detail-modal'));
-  setTimeout(() => { showModal(document.getElementById('board-compose-modal')); setTimeout(() => document.getElementById('bv2-compose-text')?.focus(), 300); }, 200);
+  setTimeout(() => {
+    showModal(document.getElementById('board-compose-modal'));
+    document.getElementById('bv2-compose-text')?.focus();
+  }, 100);
 }
+
 
 function handleImgSelect(e) {
   const file = e.target.files[0]; if (!file) return;
@@ -502,16 +605,30 @@ function handleImgSelect(e) {
 
 async function submitPost() {
   const text = document.getElementById('bv2-compose-text')?.value.trim() || '';
-  if (!text && !selectedImage) { if(typeof showNotification === 'function') showNotification('内容不能为空', 'warning'); return; }
+  if (!text && !selectedImage) {
+    if(typeof showNotification === 'function') showNotification('内容不能为空', 'warning');
+    return;
+  }
   const newReply = { id: genId(), sender: 'me', text, image: selectedImage || null, sticker: null, timestamp: Date.now() };
-  if (currentComposeMode === 'new') { boardData.myThreads.push({ id: genId(), starter: 'me', createdAt: Date.now(), replies: [newReply] }); }
-  else { const t = (currentComposeType === 'me' ? boardData.myThreads : boardData.partnerThreads).find(t => t.id === currentThreadId); if(t) { t.replies.push(newReply); delete t.expectedReplyTime; } }
+  if (currentComposeMode === 'new') {
+    boardData.myThreads.push({ id: genId(), starter: 'me', createdAt: Date.now(), replies: [newReply] });
+  } else {
+    const t = (currentComposeType === 'me' ? boardData.myThreads : boardData.partnerThreads).find(t => t.id === currentThreadId);
+    if(t) { t.replies.push(newReply); delete t.expectedReplyTime; }
+  }
   await saveData();
   checkStatus();
+  
+  // ✅ 核心修复
   hideModal(document.getElementById('board-compose-modal'));
   if(typeof showNotification === 'function') showNotification('发布成功', 'success');
-  if (currentComposeMode === 'new') { switchTab(currentComposeType); showModal(document.getElementById('envelope-board-modal')); }
-  else openDetail(currentThreadId, currentComposeType);
+  
+  if (currentComposeMode === 'new') {
+    switchTab(currentComposeType);
+    showModal(document.getElementById('envelope-board-modal'));
+  } else {
+    setTimeout(() => openDetail(currentThreadId, currentComposeType), 100);
+  }
 }
 
   function findReplyById(id) {
@@ -571,8 +688,11 @@ async function deleteThread(id, type) {
   if (type === 'me') boardData.myThreads = boardData.myThreads.filter(t => t.id !== id);
   else boardData.partnerThreads = boardData.partnerThreads.filter(t => t.id !== id);
   await saveData();
+  
+  // ✅ 核心修复
   hideModal(document.getElementById('board-detail-modal'));
-  switchTab(type); showModal(document.getElementById('envelope-board-modal'));
+  switchTab(type);
+  showModal(document.getElementById('envelope-board-modal'));
   if(typeof showNotification === 'function') showNotification('已删除', 'success');
 }
 
@@ -590,159 +710,204 @@ function exportTxt(type) {
 }
 // 点击铅笔：全页面进入编辑，隐藏干扰按钮
 window._bv2_toggleGlobalEdit = function() {
-    const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
-    const thread = threads.find(t => t.id === currentThreadId);
-    if (!thread) return;
+  const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
+  const thread = threads.find(t => t.id === currentThreadId);
+  if (!thread) return;
+  const editBar = document.getElementById('board-edit-actions-bar');
+  const penBtn = document.getElementById('board-global-edit-btn');
+  const deleteBtn = document.getElementById('board-delete-thread-btn');
+  if (editBar && editBar.style.display === 'flex') {
+    window._bv2_saveGlobalEdit();
+    return;
+  }
+  window._bv2_imgEdits = {};
 
-    const editBar = document.getElementById('board-edit-actions-bar');
-    const penBtn = document.querySelector('.board-detail-actions .board-detail-action-btn:not(.delete)');
-    const deleteBtn = document.querySelector('.board-detail-actions .board-detail-action-btn.delete');
+  // 如果这条留言里有图片，在最上方加一行小字提示
+  const hasImg = thread.replies.some(r => r.image);
+  if (hasImg) {
+    const hint = document.createElement('div');
+    hint.id = 'bv2-img-edit-hint';
+    hint.style.cssText = 'font-size:12px; color:var(--text-secondary); margin-bottom:12px; text-align:center;';
+    hint.textContent = '点击图片可进行替换或删除';
+    editBar.parentElement.insertBefore(hint, editBar);
+  }
 
-    // 如果已经在编辑状态，再次点笔就等于点保存
-    if (editBar && editBar.style.display === 'flex') {
-        window._bv2_saveGlobalEdit();
-        return;
+  // 1. 开启文本编辑
+  thread.replies.forEach(r => {
+    if (r.text) {
+      const el = document.getElementById(`bv2-text-${r.id}`);
+      if (el) {
+        el.dataset.originalText = el.textContent;
+        el.contentEditable = true;
+        el.classList.add('editing');
+      }
     }
+  });
 
-    // 开启所有文本框
-    thread.replies.forEach(r => {
-        if (r.text) {
-            const el = document.getElementById(`bv2-text-${r.id}`);
-            if (el) {
-                el.dataset.originalText = el.textContent; // 备份原文，用于取消
-                el.contentEditable = true;
-                el.classList.add('editing');
-            }
-        }
-    });
+  // 2. 给图片绑定点击事件
+  thread.replies.forEach(r => {
+    if (r.image) {
+      const imgWrapper = document.getElementById(`bv2-img-${r.id}`);
+      const imgEl = imgWrapper ? imgWrapper.querySelector('img') : null;
+      if (imgEl) {
+        imgEl.dataset.origOnclick = imgEl.getAttribute('onclick');
+        imgEl.removeAttribute('onclick');
+        imgEl.style.cursor = 'pointer';
+        imgEl.onclick = function(e) {
+          e.stopPropagation();
+          window._bv2_pendingImgId = r.id;
+          //showModal(document.getElementById('board-img-action-modal'));
+          document.getElementById('board-img-action-modal').style.display = 'flex';
+        };
+      }
+    }
+  });
 
-    // 切换UI显示
-    if (editBar) editBar.style.display = 'flex';
-    if (penBtn) penBtn.style.display = 'none';
-    if (deleteBtn) deleteBtn.style.display = 'none';
-    
-    // 隐藏底部的“继续留言/等待回复”防误触
-    const originalActions = document.querySelector('.board-paper-content > .board-add-btn, .board-paper-content > .board-waiting-reply');
-    if (originalActions) originalActions.style.display = 'none';
+  if (editBar) editBar.style.display = 'flex';
+  if (penBtn) penBtn.style.display = 'none';
+  if (deleteBtn) deleteBtn.style.display = 'none';
+  const originalActions = document.querySelector('.board-paper-content > .board-add-btn, .board-paper-content > .board-waiting-reply');
+  if (originalActions) originalActions.style.display = 'none';
 };
 
-// 点击保存：存盘并恢复原样
+
 window._bv2_saveGlobalEdit = async function() {
-    const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
-    const thread = threads.find(t => t.id === currentThreadId);
-    if (!thread) return;
+  const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
+  const thread = threads.find(t => t.id === currentThreadId);
+  if (!thread) return;
+  let needSave = false;
 
-    let needSave = false;
-    thread.replies.forEach(r => {
-        if (r.text) {
-            const el = document.getElementById(`bv2-text-${r.id}`);
-            if (el && el.classList.contains('editing')) {
-                const newText = el.textContent.trim();
-                if (newText && newText !== r.text) {
-                    r.text = newText;
-                    needSave = true;
-                }
-                el.contentEditable = false;
-                el.classList.remove('editing');
-                delete el.dataset.originalText;
-            }
-        }
-    });
-
-    if (needSave) {
-        await saveData();
-        if(typeof showNotification === 'function') showNotification('修改已保存', 'success');
+  // 1. 存文本
+  thread.replies.forEach(r => {
+    if (r.text) {
+      const el = document.getElementById(`bv2-text-${r.id}`);
+      if (el && el.classList.contains('editing')) {
+        const newText = el.textContent.trim();
+        if (newText && newText !== r.text) { r.text = newText; needSave = true; }
+        el.contentEditable = false;
+        el.classList.remove('editing');
+        delete el.dataset.originalText;
+      }
     }
-    restoreDetailViewUI();
+  });
+
+    // 2. 存图片
+  const edits = window._bv2_imgEdits || {};
+  const hadImgChange = Object.keys(edits).length > 0; // ✅ 提前在这里判断！
+  Object.keys(edits).forEach(replyId => {
+    const reply = thread.replies.find(x => x.id === replyId);
+    if (!reply) return;
+    if (edits[replyId].action === 'delete' && reply.image) {
+      reply.image = null;
+      needSave = true;
+    } else if (edits[replyId].action === 'replace' && edits[replyId].data) {
+      reply.image = edits[replyId].data;
+      needSave = true;
+    }
+  });
+
+  window._bv2_imgEdits = {}; // ✅ 判断完之后再清空
+
+  if (needSave) {
+    await saveData();
+    if(typeof showNotification === 'function') showNotification('修改已保存', 'success');
+    // 图片有变动，刷新当前详情页让结构彻底干净
+    if (hadImgChange) {
+      openDetail(currentThreadId, currentView);
+      return;
+    }
+  }
+  restoreDetailViewUI();
 };
 
-// 点击取消：丢弃修改并恢复原样
 window._bv2_cancelGlobalEdit = function() {
-    const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
-    const thread = threads.find(t => t.id === currentThreadId);
-    if (!thread) return;
+  const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
+  const thread = threads.find(t => t.id === currentThreadId);
+  if (!thread) return;
 
-    thread.replies.forEach(r => {
-        if (r.text) {
-            const el = document.getElementById(`bv2-text-${r.id}`);
-            if (el && el.classList.contains('editing')) {
-                el.textContent = el.dataset.originalText || r.text; // 还原备份
-                el.contentEditable = false;
-                el.classList.remove('editing');
-                delete el.dataset.originalText;
-            }
+  // 1. 还原文本
+  thread.replies.forEach(r => {
+    if (r.text) {
+      const el = document.getElementById(`bv2-text-${r.id}`);
+      if (el && el.classList.contains('editing')) {
+        el.textContent = el.dataset.originalText || r.text;
+        el.contentEditable = false;
+        el.classList.remove('editing');
+        delete el.dataset.originalText;
+      }
+    }
+  });
+
+  // 2. 还原图片（恢复查看大图功能，重置显示状态）
+  thread.replies.forEach(r => {
+    if (r.image) {
+      const imgWrapper = document.getElementById(`bv2-img-${r.id}`);
+      const imgEl = imgWrapper ? imgWrapper.querySelector('img') : null;
+      if (imgEl) {
+        // 恢复原来的点击事件
+        if (imgEl.dataset.origOnclick) {
+          imgEl.setAttribute('onclick', imgEl.dataset.origOnclick);
+          delete imgEl.dataset.origOnclick;
         }
-    });
-    restoreDetailViewUI();
+        imgEl.onclick = null;
+        imgEl.style.cursor = 'pointer';
+        // 恢复被隐藏的图片
+        imgWrapper.style.display = 'inline-block';
+      }
+    }
+  });
+
+  window._bv2_imgEdits = {};
+  restoreDetailViewUI();
+};
+
+// 重写取消，清除图片编辑状态和蒙层
+window._bv2_cancelGlobalEdit = function() {
+  const threads = currentView === 'me' ? boardData.myThreads : boardData.partnerThreads;
+  const thread = threads.find(t => t.id === currentThreadId);
+  if (!thread) return;
+
+  // 1. 还原文本
+  thread.replies.forEach(r => {
+    if (r.text) {
+      const el = document.getElementById(`bv2-text-${r.id}`);
+      if (el && el.classList.contains('editing')) {
+        el.textContent = el.dataset.originalText || r.text;
+        el.contentEditable = false;
+        el.classList.remove('editing');
+        delete el.dataset.originalText;
+      }
+    }
+  });
+
+  // 2. 移除图片蒙层，恢复透明度
+  document.querySelectorAll('.img-edit-overlay').forEach(ov => ov.remove());
+  thread.replies.forEach(r => {
+    if (r.image) {
+      const imgEl = document.getElementById(`bv2-img-${r.id}`);
+      if (imgEl) { imgEl.style.opacity = '1'; imgEl.classList.remove('editing'); }
+    }
+  });
+
+  // 3. 清空状态
+  window._bv2_imgEdits = {};
+  restoreDetailViewUI();
 };
 
 // 内部公用：恢复界面的默认状态
 function restoreDetailViewUI() {
-    const editBar = document.getElementById('board-edit-actions-bar');
-    const penBtn = document.querySelector('.board-detail-actions .board-detail-action-btn:not(.delete)');
-    const deleteBtn = document.querySelector('.board-detail-actions .board-detail-action-btn.delete');
-    const originalActions = document.querySelector('.board-paper-content > .board-add-btn, .board-paper-content > .board-waiting-reply');
-
-    if (editBar) editBar.style.display = 'none';
-    if (penBtn) penBtn.style.display = 'flex';
-    if (deleteBtn) deleteBtn.style.display = 'flex';
-    if (originalActions) originalActions.style.display = '';
+  const editBar = document.getElementById('board-edit-actions-bar');
+  const penBtn = document.querySelector('.board-detail-actions .board-detail-action-btn:not(.delete)');
+  const deleteBtn = document.querySelector('.board-detail-actions .board-detail-action-btn.delete');
+  const originalActions = document.querySelector('.board-paper-content > .board-add-btn, .board-paper-content > .board-waiting-reply');
+  if (editBar) editBar.style.display = 'none';
+  if (penBtn) penBtn.style.display = 'flex';
+  if (deleteBtn) deleteBtn.style.display = 'flex';
+  if (originalActions) originalActions.style.display = '';
+  // 移除图片编辑提示
+  const hint = document.getElementById('bv2-img-edit-hint');
+  if (hint) hint.remove();
 }
-
-// 点击公告天气标签：弹出修改框
-window.startEditDgWeather = function() {
-    var now = new Date();
-    var key = 'customWeather_' + now.getFullYear() + '_' + (now.getMonth()+1) + '_' + now.getDate();
-    var current = localStorage.getItem(key) || '';
-    
-    var old = document.getElementById('dg-weather-edit-modal');
-    if (old) old.remove();
-
-    var wrap = document.createElement('div');
-    wrap.id = 'dg-weather-edit-modal';
-    wrap.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);';
-    wrap.innerHTML = `
-        <div style="background:var(--primary-bg);border-radius:20px;padding:22px 20px;width:min(320px,88vw);box-shadow:0 20px 60px rgba(0,0,0,0.28);border:1px solid var(--border-color);">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-                <span style="font-size:15px;font-weight:700;color:var(--text-primary);font-family:var(--font-family);">自定义天气</span>
-                <button id="dg-weather-close" style="background:none;border:none;font-size:18px;color:var(--text-secondary);cursor:pointer;">✕</button>
-            </div>
-            <input id="dg-weather-input" type="text" maxlength="20" placeholder="例如：晴空万里、细雨蒙蒙" value="${current.replace(/"/g, '&quot;')}" style="width:100%;padding:10px;border:1.5px solid var(--border-color);border-radius:10px;background:var(--secondary-bg);color:var(--text-primary);font-size:13px;outline:none;font-family:var(--font-family);box-sizing:border-box;margin-bottom:16px;">
-            <div style="display:flex;gap:8px;">
-                <button id="dg-weather-clear" style="flex:1;padding:9px;border:1px solid var(--border-color);border-radius:10px;background:var(--secondary-bg);color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">恢复默认</button>
-                <button id="dg-weather-save" style="flex:2;padding:9px;border:none;border-radius:10px;background:var(--accent-color);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-family);">保存</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(wrap);
-
-    var input = document.getElementById('dg-weather-input');
-    if(input) input.focus();
-
-    function close() { wrap.remove(); }
-
-    document.getElementById('dg-weather-close').onclick = close;
-    wrap.onclick = function(e) { if(e.target === wrap) close(); };
-
-    document.getElementById('dg-weather-clear').onclick = function() {
-        localStorage.removeItem(key);
-        if (typeof _buildDailyGreeting === 'function') _buildDailyGreeting();
-        close();
-        if (typeof showNotification === 'function') showNotification('已恢复默认天气', 'success', 1500);
-    };
-
-    document.getElementById('dg-weather-save').onclick = function() {
-        var val = input.value.trim();
-        if (val) {
-            localStorage.setItem(key, val);
-            if (typeof _buildDailyGreeting === 'function') _buildDailyGreeting();
-            close();
-            if (typeof showNotification === 'function') showNotification('天气已更新 ✓', 'success', 1500);
-        } else {
-            if (typeof showNotification === 'function') showNotification('请输入天气内容', 'warning');
-        }
-    };
-};
 
 // --- 暴露全局接口 ---
 window.loadEnvelopeData = loadData;

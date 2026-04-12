@@ -410,7 +410,12 @@ function initScreenshotSelection() {
             const isUser = msg.sender === 'user';
             const time = new Date(msg.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
             const safeText = (msg.text || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
+            // 获取图片地址（兼容 msg.image 或 msg.sticker 字段）
+            const imgUrl = msg.image || msg.sticker || msg.img || '';
+            let imgPreviewHTML = '';
+            if (imgUrl) {
+                imgPreviewHTML = `<div style="margin-top:6px;"><img src="${imgUrl}" style="max-width:120px; max-height:120px; border-radius:8px; display:block;"></div>`;
+            }
             let replyPreviewHTML = '';
             if (msg.replyTo) {
                 const replySender = msg.replyTo.sender === 'user' ? (settings.myName || '我') : (settings.partnerName || '对方');
@@ -433,6 +438,7 @@ function initScreenshotSelection() {
                 <div style="flex:1; min-width:0;">
                     ${replyPreviewHTML}
                     <div style="font-size:14px; margin-bottom:2px; word-break:break-all;">${safeText}</div>
+                     ${imgPreviewHTML} 
                     <div style="font-size:11px; color:var(--text-secondary); display:flex; justify-content:space-between;">
                         <span style="font-weight:500; color:${isUser ? 'var(--accent-color)' : 'var(--text-primary)'};">${isUser ? '我' : '对方'}</span>
                         <span>${time}</span>
@@ -756,7 +762,28 @@ async function generateScreenshot(msgs) {
         // 循环消息
         sortedMsgs.forEach((msg, index) => {
             const isUser = msg.sender === 'user';
+           // const safeText = (msg.text || '').replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, '<br>');
+           // 1. 处理纯文本
             const safeText = (msg.text || '').replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, '<br>');
+
+            // 2. 处理表情包/图片 (支持 msg.image 或 msg.sticker 等字段)
+            let imageHtml = '';
+            // 兼容各种可能存储图片的字段名
+            const imgUrl = msg.image || msg.sticker || msg.img || msg.fileUrl || '';
+
+            if (imgUrl) {
+                // 安全处理 URL，防止 XSS
+                const safeUrl = imgUrl.replace(/"/g, '&quot;');
+                
+                // 根据消息类型判断样式：如果只有图片没有文字，就大图展示；如果有文字，就作为小图展示
+                const isOnlyImage = !safeText;
+                const imgStyle = isOnlyImage 
+                    ? 'max-width:100%; border-radius:12px; display:block;' 
+                    : 'max-width:180px; max-height:180px; border-radius:8px; display:block; margin-top:6px;';
+                
+                imageHtml = `<img src="${safeUrl}" style="${imgStyle}" onerror="this.style.display='none'">`;
+            }
+
             // 生成时间戳（根据设置中的格式）
            // 生成时间戳（连续同发送者只在最后一条显示）
             const fmt = settings.timeFormat || 'HH:mm';
@@ -828,6 +855,7 @@ async function generateScreenshot(msgs) {
                     <div style="display:inline-block; padding:10px 15px; border-radius:18px; background:${isUser ? accentColor : secondaryBg}; max-width:calc(80% -${avatarSize + 12}px); color:${isUser ? '#fff' : textPrimary}; text-align:left; font-size:15px; word-break:break-word;${bubbleStyleCSS} box-shadow: 0 3px 6px rgba(0,0,0,0.1);">
                         ${replyContent}
                         ${safeText}
+                        ${imageHtml}
                     </div>
                     ${timeStrHTML}
                     </div>
@@ -840,6 +868,7 @@ async function generateScreenshot(msgs) {
                        <div style="display:inline-block; padding:10px 15px; border-radius:18px; background:${isUser ? accentColor : secondaryBg}; max-width:80%; color:${isUser ? '#fff' : textPrimary}; text-align:left; font-size:15px; word-break:break-word; ${bubbleStyleCSS} box-shadow: 0 3px 6px rgba(0,0,0,0.1);">
                             ${replyContent}
                             ${safeText}
+                            ${imageHtml}
                         </div>
                         ${timeStrHTML}
                     </div>

@@ -992,13 +992,16 @@ function startCall(isPartner) {
 
     /* ── Bind all events ──────────────────────────────────── */
     function bindEvents() {
-        // Incoming
         document.getElementById('call-inc-reject')?.addEventListener('click', () => {
+            // 1. 隐藏来电弹窗 & 清除定时器
             document.getElementById('call-incoming-overlay')?.classList.remove('visible');
             clearTimeout(S.incomingTimer);
-            const i = document.getElementById('message-input'), sb = document.getElementById('send-btn');
-            if (i && sb) { i.value = `📵 已拒绝 ${getName()} 的视频通话`; sb.click(); }
+
+            // 2. 直接调用 sendCallEvent，保持和对方拒接你完全一致的样式！
+            sendCallEvent('fa-phone-slash', `已拒绝 ${getName()} 的视频通话`, null);
         });
+
+
         document.getElementById('call-inc-accept')?.addEventListener('click', () => {
             document.getElementById('call-incoming-overlay')?.classList.remove('visible');
             clearTimeout(S.incomingTimer); startCall(true);

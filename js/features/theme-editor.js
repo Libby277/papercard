@@ -293,16 +293,41 @@ function initThemeEditor() {
     const fontApplyBtn = document.getElementById('apply-font-btn'); // 请核对实际ID
     const fontUrlInput = document.getElementById('font-url-input'); // 请核对实际ID
 
-    if (fontApplyBtn && fontUrlInput) {
-    fontApplyBtn.addEventListener('click', () => {
+    /*if (fontApplyBtn && fontUrlInput) {
+        fontApplyBtn.addEventListener('click', () => {
         const url = fontUrlInput.value.trim();
         settings.customFontUrl = url;
-        applyCustomFont(url);
-        throttledSaveData(); // 保存到本地
-        showNotification('字体已应用', 'success');
-    });
+        showNotification('正在尝试加载字体...', 'info', 1000);
+        applyCustomFont(url).then(() => {
+            throttledSaveData();
+            if(url) showNotification('字体已应用', 'success');
+            else showNotification('已恢复默认字体', 'success');
+        }).catch(err => {
+            console.error('字体加载失败:', err);
+            showNotification('字体加载失败，请检查链接或网络', 'error');
+        });
+        });
+    }*/
+    if (fontApplyBtn && fontUrlInput) {
+        fontApplyBtn.addEventListener('click', () => {
+            const url = fontUrlInput.value.trim();
+            settings.customFontUrl = url;
+            // 🌟 加上清理本地字体的逻辑
+            settings.useLocalFont = false;
+            localforage.removeItem(`${APP_PREFIX}local_font_base64`).catch(()=>{});
+            localforage.removeItem(`${APP_PREFIX}local_font_blob`).catch(()=>{});
+            
+            showNotification('正在尝试加载字体...', 'info', 1000);
+            applyCustomFont(url).then(() => {
+                throttledSaveData();
+                if(url) showNotification('字体已应用', 'success');
+                else showNotification('已恢复默认字体', 'success');
+            }).catch(err => {
+                console.error('字体加载失败:', err);
+                showNotification('字体加载失败，请检查链接或网络', 'error');
+            });
+        });
     }
-
 }
         function populateThemeEditor(currentColors = null) {
             const grid = document.getElementById('theme-editor-grid');
@@ -539,7 +564,7 @@ function populateThemeSelector() {
                 messageFontFamily: settings.messageFontFamily,
                 messageFontWeight: settings.messageFontWeight,
                 messageLineHeight: settings.messageLineHeight,
-                //customFontUrl: settings.customFontUrl || '',
+                customFontUrl: settings.customFontUrl || '',
                 customGlobalCss: document.getElementById('custom-global-css-input')?.value || '',
                 customBubbleCss: settings.customBubbleCss || '',
                 inChatAvatarEnabled: settings.inChatAvatarEnabled,
@@ -569,7 +594,7 @@ function populateThemeSelector() {
                 messageFontFamily: settings.messageFontFamily,
                 messageFontWeight: settings.messageFontWeight,
                 messageLineHeight: settings.messageLineHeight,
-                //customFontUrl: settings.customFontUrl || '',
+                customFontUrl: settings.customFontUrl || '',
                 customGlobalCss: document.getElementById('custom-global-css-input')?.value || '',
                 customBubbleCss: settings.customBubbleCss || '',
                 inChatAvatarEnabled: settings.inChatAvatarEnabled,
@@ -601,97 +626,19 @@ function populateThemeSelector() {
             settings.inChatAvatarSize = scheme.inChatAvatarSize;
             
             const root = document.documentElement;
-            /*if (scheme.customColors && Object.keys(scheme.customColors).length > 0) {
-                Object.entries(scheme.customColors).forEach(([v, c]) => {
-                    root.style.setProperty(v, c);
-                });
-            } else {
-                if (themeColorMappings) {
-                    Object.keys(themeColorMappings).forEach(v => root.style.removeProperty(v));
-                }
-            }*/
-           
-            if (scheme.customColors && Object.keys(scheme.customColors).length > 0) {
-                Object.entries(scheme.customColors).forEach(([v, c]) => {
-                        root.style.setProperty(v, c);
-                        // 同步 RGB 变量
-                        if (v === '--message-received-text' || v === '--message-sent-text') {
-                        const rgb = colorToRgbString(c);
-                        if (rgb) {
-                            root.style.setProperty(v + '-rgb', rgb);
-                        }
-                    }
-                });
-                } else {
-                if (themeColorMappings) {
-                    Object.keys(themeColorMappings).forEach(v => root.style.removeProperty(v));
-                }
-
-                // 没有自定义颜色时，也要同步默认的 RGB
-                const defaultReceived = getComputedStyle(root).getPropertyValue('--message-received-text').trim();
-                const defaultSent = getComputedStyle(root).getPropertyValue('--message-sent-text').trim();
-                if (defaultReceived) {
-                    const rgb1 = colorToRgbString(defaultReceived);
-                    if (rgb1) root.style.setProperty('--message-received-text-rgb', rgb1);
-                }
-                if (defaultSent) {
-                    const rgb2 = colorToRgbString(defaultSent);
-                    if (rgb2) root.style.setProperty('--message-sent-text-rgb', rgb2);
-                }
+           // 先处理字体
+            if (scheme.customFontUrl && scheme.customFontUrl.trim()) {
+                try { applyCustomFont(scheme.customFontUrl); } catch(e) { console.warn('应用方案字体失败', e); }
+            } else if (scheme.messageFontFamily) {
+                // 如果没有直链，尝试只应用字体栈（配合上面的坑四修复生效）
+                document.documentElement.style.setProperty('--message-font-family', scheme.messageFontFamily);
+                document.documentElement.style.setProperty('--font-family', scheme.messageFontFamily);
             }
 
-            function applyCustomFont(fontUrl) {
-                if (!fontUrl || !fontUrl.trim()) return;
-                
-                // 如果已经有旧的字体标签，先移除
-                let existingLink = document.getElementById('user-custom-font-link');
-                if (existingLink) existingLink.remove();
-                let existingStyle = document.getElementById('user-custom-font-style');
-                if (existingStyle) existingStyle.remove();
-
-                // 判断填入的是 CSS 链接(如 Google Fonts) 还是 TTF 文件链接
-                if (fontUrl.endsWith('.css')) {
-                    // 如果是 CSS 链接，直接用 link 标签引入
-                    const link = document.createElement('link');
-                    link.id = 'user-custom-font-link';
-                    link.rel = 'stylesheet';
-                    link.href = fontUrl;
-                    document.head.appendChild(link);
-                } else {
-                    // 如果是 TTF/WOFF 等文件链接，用 @font-face 动态注入
-                    const styleTag = document.createElement('style');
-                    styleTag.id = 'user-custom-font-style';
-                    styleTag.textContent = `
-                    @font-face {
-                        font-family: 'CustomUserFont';
-                        src: url('${fontUrl}') format('truetype');
-                        font-weight: normal;
-                        font-style: normal;
-                    }
-                    `;
-                    document.head.appendChild(styleTag);
-                }
-
-                // 将字体应用到全局和消息气泡变量上
-                const fontFamily = fontUrl.endsWith('.css') ? "'CustomUserFont', serif" : "'CustomUserFont', serif";
-                document.documentElement.style.setProperty('--message-font-family', fontFamily);
-                document.documentElement.style.setProperty('--font-family', fontFamily);
+            // 全局 CSS 独立判断，不要用 else if 挡住字体
+            if (scheme.customGlobalCss && scheme.customGlobalCss.trim()) {
+                try { applyCustomGlobalCss(scheme.customGlobalCss); } catch(e) {}
             }
-
-
-            if (scheme.customFontUrl) {
-            try {
-                applyCustomFont(scheme.customFontUrl);
-            } catch(e) {}
-            } else if (scheme.customGlobalCss) {
-            try {
-                applyCustomGlobalCss(scheme.customGlobalCss);
-            } catch(e) {}
-            } else {
-            document.documentElement.style.setProperty('--message-font-family', scheme.messageFontFamily || "'Noto Serif SC', serif");
-            document.documentElement.style.setProperty('--font-family', scheme.messageFontFamily || "'Noto Serif SC', serif");
-            }
-
             
             if (scheme.customBubbleCss) {
                 try { applyCustomBubbleCss(scheme.customBubbleCss); } catch(e) {}

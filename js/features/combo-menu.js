@@ -83,12 +83,7 @@ function showEmojiTab() {
         const item = document.createElement('div');
         item.className = 'picker-item';
         item.innerHTML = `<img src="${src}" style="width:100%; height:100%; object-fit:cover; border-radius:6px;">`;
-        item.onclick = () => {
-            /*if (isBatchMode) {
-                batchMessages.push({ id: Date.now() + batchMessages.length, text: '', image: src });
-                updateBatchPreview();
-                showNotification('已添加到批量发送', 'success', 1200);
-            } else {*/
+        /*item.onclick = () => {
                 addMessage({
                     id: Date.now(),
                     sender: 'user',
@@ -106,7 +101,12 @@ function showEmojiTab() {
                 window._pendingReplyTimer = setTimeout(() => { window._pendingReplyTimer = null; simulateReply(); }, randomDelay);
             
             document.getElementById('user-sticker-picker').classList.remove('active');
+        };*/
+        item.onclick = () => {
+            document.getElementById('user-sticker-picker').classList.remove('active');
+            sendMessage(null, 'normal', src);
         };
+
         area.appendChild(item);
     });
 }
@@ -183,7 +183,4 @@ function showPokeTab() {
     };
     area.appendChild(customBtn);
 }
-    
-    function initComboMenu() {
-        renderComboMenu();
-    }
+

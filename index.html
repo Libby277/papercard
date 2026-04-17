@@ -122,13 +122,12 @@
     </div>
 
     <div class="main-chat-area">
-
         <div class="history-loader" id="history-loader">
             <div class="history-spinner"></div>
         </div>
-
         <div class="chat-container" id="chat-container">
     </div>
+
     <div class="empty-state" id="empty-state" style="display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;width:100%;pointer-events:none;z-index:1;">
             <div style="position:relative;margin-bottom:20px;">
                 <i class="fas fa-heart" style="font-size:52px;opacity:0.55;color:var(--accent-color);"></i>
@@ -266,7 +265,7 @@
         <button class="send-btn input-btn" id="send-btn" title="发送消息"><i class="fas fa-paper-plane"></i></button>
         
         <div class="sticker-picker-popover" id="user-sticker-picker">
-            <div class="combo-tabs-header">
+            <!--<div class="combo-tabs-header">
                 <button class="combo-tab-btn active" data-tab="my-sticker"><i class="fas fa-user" style="font-size:10px;"></i> 我</button>
                 <button class="combo-tab-btn" data-tab="partner-sticker"><i class="fas fa-heart" style="font-size:10px;"></i> 对方</button>
                 <button class="combo-tab-btn" data-tab="poke">拍一拍</button>
@@ -276,11 +275,19 @@
                 </div>
             </div>
             <div class="combo-content-area" id="combo-content-area">
+            </div>-->
+            <div class="combo-tabs-header">
+                <button class="combo-tab-btn active" data-tab="my-sticker"><i class="fas fa-user" style="font-size:10px;"></i> 我的表情</button>
+                <button class="combo-tab-btn" data-tab="photo"><i class="fas fa-image" style="font-size:10px;"></i> 照片</button>
+                <button class="combo-tab-btn" data-tab="poke">拍一拍</button>
+                <!-- 把原来右边的“添加”和“齿轮”按钮整块删掉了 -->
+            </div>
+            <div class="combo-content-area" id="combo-content-area">
             </div>
         </div>
     </div>
     <input type="file" id="image-input" class="file-input" accept="image/*">
-    <input type="file" id="my-sticker-quick-upload" class="file-input" accept="image/*" multiple>
+     <!--<input type="file" id="my-sticker-quick-upload" class="file-input" accept="image/*" multiple> -->
 </div>
     </div>
 
@@ -318,16 +325,16 @@
         </div>
     </div>
 
-    <div class="modal" id="poke-modal">
+    <!--<div class="modal" id="poke-modal">
         <div class="modal-content">
             <div class="modal-title">
                 <i class="fas fa-hand-sparkles"></i><span>拍一拍</span>
             </div>
             <input type="text" class="modal-input" id="poke-input" placeholder="例如：拍了拍对方的肩膀"><div class="modal-buttons">
-                <button class="modal-btn modal-btn-secondary" id="cancel-poke">取消</button><button class="modal-btn modal-btn-primary" id="send-poke">发送</button>
+                <button class="modal-btn modal-btn-secondary" id="cancel-poke">取消</button><button class="modal-btn modal-btn-primary" id="send-poke">添加</button>
             </div>
         </div>
-    </div>
+    </div>-->
 
 <div class="modal" id="envelope-view-modal" style="z-index:2100;">
     <div class="modal-content" style="overflow:hidden;padding:0;background:transparent;max-height:92vh;display:flex;flex-direction:column;">
@@ -387,80 +394,6 @@
     </div>
     </div>
 </div>
-<div class="modal" id="group-chat-modal">
-    <div class="modal-content">
-        <div class="modal-title">
-            <i class="fas fa-users"></i><span>群聊设置</span>
-        </div>
-
-        <div class="settings-section">
-            <div class="settings-section-title"><i class="fas fa-toggle-on"></i>群聊模式</div>
-            <div id="group-mode-toggle" style="display:flex;align-items:center;gap:12px;background:var(--primary-bg);border:1px solid var(--border-color);border-radius:12px;padding:12px 14px;cursor:pointer;transition:all 0.2s;">
-                <div style="width:36px;height:36px;border-radius:50%;background:rgba(var(--accent-color-rgb),0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i id="group-mode-icon" class="fas fa-users" style="font-size:18px;color:var(--accent-color);"></i>
-                </div>
-                <div style="flex:1;">
-                    <div style="font-size:13px;font-weight:600;color:var(--text-primary);">群聊模式</div>
-                    <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;" id="group-mode-status">已关闭 — 点击开启</div>
-                </div>
-                <div id="group-mode-pill" style="width:44px;height:24px;border-radius:24px;background:var(--border-color);position:relative;transition:background 0.3s;flex-shrink:0;">
-                    <div id="group-mode-knob" style="position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left 0.25s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="settings-section" id="group-display-section" style="display:none;">
-            <div class="settings-section-title"><i class="fas fa-eye"></i>显示选项</div>
-            <div style="display:flex;flex-direction:column;gap:8px;">
-                <div id="group-show-name-toggle" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--primary-bg);border:1px solid var(--border-color);border-radius:10px;cursor:pointer;">
-                    <i class="fas fa-tag" style="color:var(--accent-color);width:18px;"></i>
-                    <span style="flex:1;font-size:13px;">显示成员名称</span>
-                    <div id="group-show-name-pill" style="width:36px;height:20px;border-radius:20px;background:var(--accent-color);position:relative;transition:background 0.3s;">
-                        <div id="group-show-name-knob" style="position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:3px;right:3px;transition:right 0.25s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="settings-section" id="group-members-section" style="display:none;">
-            <div class="settings-section-title" style="display:flex;align-items:center;justify-content:space-between;">
-                <span><i class="fas fa-users"></i>群成员</span>
-                <button onclick="openAddGroupMember()" class="modal-btn modal-btn-primary" style="padding:5px 12px;font-size:12px;"><i class="fas fa-plus"></i> 添加</button>
-            </div>
-            <div id="group-members-list" style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;"></div>
-        </div>
-
-        <div class="modal-buttons">
-            <button class="modal-btn modal-btn-secondary" id="close-group-chat">关闭</button>
-        </div>
-    </div>
-</div>
-
-<div class="modal" id="group-member-edit-modal" style="z-index:2200;">
-    <div class="modal-content" style="max-width:320px;">
-        <div class="modal-title">
-            <i class="fas fa-user-edit"></i><span id="group-member-edit-title">添加成员</span>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:12px;padding:4px 0;">
-            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
-                <div id="group-member-avatar-preview" onclick="document.getElementById('group-member-avatar-input').click()" style="width:64px;height:64px;border-radius:50%;background:var(--primary-bg);border:2px dashed var(--border-color);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;flex-shrink:0;">
-                    <i class="fas fa-camera" style="font-size:20px;color:var(--text-secondary);"></i>
-                </div>
-                <span style="font-size:11px;color:var(--text-secondary);">点击上传头像</span>
-                <input type="file" id="group-member-avatar-input" accept="image/*" style="display:none;" onchange="previewGroupMemberAvatar(this)">
-            </div>
-            <div>
-                <label style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;display:block;">成员名字</label>
-                <input type="text" id="group-member-name-input" placeholder="输入名字" maxlength="10" style="width:100%;padding:10px 12px;border:1px solid var(--border-color);border-radius:10px;background:var(--primary-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box;">
-            </div>
-        </div>
-        <input type="hidden" id="group-member-edit-index">
-        <div class="modal-buttons">
-            <button class="modal-btn modal-btn-secondary" onclick="closeGroupMemberEdit()">取消</button>
-            <button class="modal-btn modal-btn-primary" onclick="saveGroupMember()">保存</button>
-        </div>
-    </div>
-</div>
 
     <div class="modal" id="settings-modal">
         <div class="modal-content">
@@ -486,421 +419,454 @@
                     <span>数据管理</span>
                 </div>
             </div>
-
-
             <div class="modal-buttons">
                 <button class="modal-btn modal-btn-secondary" id="cancel-settings">关闭</button>
             </div>
         </div>
     </div>
 
-
     <div class="modal" id="appearance-modal">
         <div class="modal-content">
-
-<div class="modal-title" id="appearance-modal-title">
-    <i class="fas fa-palette"></i><span>外观设置</span>
-</div>
-<div id="gallery-banner-entry" style="margin-bottom: 15px; padding: 12px 16px; background: linear-gradient(135deg, rgba(var(--accent-color-rgb), 0.1), rgba(var(--accent-color-rgb), 0.02)); border: 1px solid rgba(var(--accent-color-rgb), 0.2); border-radius: 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);">
-    <div style="display:flex; align-items:center; gap: 12px;">
-        <div style="width: 36px; height: 36px; background: var(--accent-color); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: 0 4px 10px rgba(var(--accent-color-rgb), 0.3);">
-            <i class="fas fa-images" style="font-size: 16px;"></i>
-        </div>
-        <div>
-            <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); letter-spacing: 0.5px;">传讯专属画廊</div>
-            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">获取气泡等素材</div>
-        </div>
-    </div>
-    <i class="fas fa-chevron-right" style="color: var(--accent-color); opacity: 0.7;"></i>
-</div>
-<div id="appearance-nav-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 0 12px;">
-    <div class="settings-card" onclick="showAppearancePanel('theme')" style="cursor:pointer;">
-        <i class="fas fa-paint-roller"></i><span>主题配色</span>
-    </div>
-    <div class="settings-card" onclick="showAppearancePanel('font-bg')" style="cursor:pointer;">
-        <i class="fas fa-font"></i><span>背景 & 字体</span>
-    </div>
-    <div class="settings-card" onclick="showAppearancePanel('bubble-css')" style="cursor:pointer;">
-        <i class="fas fa-comment"></i><span>气泡 & CSS</span>
-    </div>
-    <div class="settings-card" onclick="showAppearancePanel('avatar')" style="cursor:pointer;">
-        <i class="fas fa-user-circle"></i><span>聊天头像</span>
-    </div>
-</div>
-
-<div id="appearance-panel-container" style="display:none;">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-        <button onclick="hideAppearancePanel()" style="background:var(--primary-bg);border:1px solid var(--border-color);border-radius:10px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--text-secondary);">
-            <i class="fas fa-arrow-left"></i> 返回
-        </button>
-        <span id="appearance-panel-title" style="font-size:14px;font-weight:600;color:var(--text-primary);"></span>
-    </div>
-
-    <div id="appearance-panel-theme" class="appearance-sub-panel" style="display:none;">
-            <!-- 🆕 添加日间/夜间切换 -->
-        <div class="settings-section">
-            <div class="settings-section-title"><i class="fas fa-sun"></i>显示模式</div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--secondary-bg);border-radius:12px;margin-bottom:12px;">
-                <div>
-                    <div style="font-size:14px;font-weight:500;color:var(--text-primary);">日间 / 夜间模式</div>
-                    <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">切换浅色和深色主题</div>
-                </div>
-                <label class="theme-switch">
-                    <input type="checkbox" id="theme-mode-toggle">
-                    <span class="theme-switch-slider"></span>
-                </label>
+            <div class="modal-title" id="appearance-modal-title">
+                <i class="fas fa-palette"></i><span>外观设置</span>
             </div>
-        </div>
-        <div class="settings-section">
-            <div class="settings-section-title"><i class="fas fa-paint-roller"></i>主题配色</div>
-            <div class="appearance-group" style="margin-bottom:0;">
-                <div class="theme-editor-entry-btn" id="open-theme-editor">
-                    <i class="fas fa-sliders-h"></i>
-                    <span>自定义<br>编辑器</span>
-                </div>
-                <div class="preset-colors-container">
-                    <div class="preset-colors-title"><i class="fas fa-swatchbook"></i> 快捷换肤</div>
-                    <div class="theme-picker">
-                        <button class="theme-color-btn" id="theme-gold" data-theme="gold" title="金色"></button>
-                        <button class="theme-color-btn" id="theme-blue" data-theme="blue" title="蓝色"></button>
-                        <button class="theme-color-btn" id="theme-purple" data-theme="purple" title="紫色"></button>
-                        <button class="theme-color-btn" id="theme-green" data-theme="green" title="绿色"></button>
-                        <button class="theme-color-btn" id="theme-pink" data-theme="pink" title="粉色"></button>
-                        <button class="theme-color-btn" id="theme-black-white" data-theme="black-white" title="黑白"></button>
-                        <button class="theme-color-btn" id="theme-pastel" data-theme="pastel" title="红色"></button>
-                        <button class="theme-color-btn" id="theme-sunset" data-theme="sunset" title="橙色"></button>
-                        <button class="theme-color-btn" id="theme-forest" data-theme="forest" title="深绿"></button>
-                        <button class="theme-color-btn" id="theme-ocean" data-theme="ocean" title="深蓝"></button>
+        
+            <div id="gallery-banner-entry" style="margin-bottom: 15px; padding: 12px 16px; background: linear-gradient(135deg, rgba(var(--accent-color-rgb), 0.1), rgba(var(--accent-color-rgb), 0.02)); border: 1px solid rgba(var(--accent-color-rgb), 0.2); border-radius: 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);">
+                <div style="display:flex; align-items:center; gap: 12px;">
+                    <div style="width: 36px; height: 36px; background: var(--accent-color); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: 0 4px 10px rgba(var(--accent-color-rgb), 0.3);">
+                        <i class="fas fa-images" style="font-size: 16px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); letter-spacing: 0.5px;">传讯专属画廊</div>
+                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">获取气泡等素材</div>
                     </div>
                 </div>
+                <i class="fas fa-chevron-right" style="color: var(--accent-color); opacity: 0.7;"></i>
             </div>
-        </div>
-        <div class="settings-section" id="theme-schemes-section">
-            <div class="settings-section-title">
-                <i class="fas fa-layer-group"></i>主题方案
-                <button id="save-theme-scheme-btn" class="modal-btn modal-btn-primary" style="padding:4px 10px; font-size:11px; margin-left:auto;">
-                    <i class="fas fa-plus"></i> 保存当前
-                </button>
-            </div>
-            <div style="font-size:11px;color:var(--text-secondary);opacity:0.7;margin-bottom:8px;">保存当前所有外观设置，方便快速切换</div>
-            <div id="theme-schemes-list" class="theme-schemes-list">
-                <div class="theme-schemes-empty" id="theme-schemes-empty">
-                    <i class="fas fa-paint-brush"></i>
-                    <span>暂无保存的方案，点击"保存当前"试试~</span>
+        
+            <div id="appearance-nav-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 0 12px;">
+                <div class="settings-card" style="cursor:pointer;" onclick="hideModal(document.getElementById('appearance-modal'));showModal(document.getElementById('theme-modal'))">
+                    <i class="fas fa-paint-roller"></i><span>主题配色</span>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="appearance-panel-font" class="appearance-sub-panel" style="display:none;">
-        <div class="settings-section">
-            <div class="settings-section-title"><i class="fas fa-font"></i>字体设置</div>
-            <div class="font-size-control">
-                <span class="font-size-label">大小:</span>
-                <input type="range" min="12" max="24" value="16" class="font-size-slider" id="font-size-slider">
-                <span class="font-size-value" id="font-size-value">16px</span>
-            </div>
-            <div style="margin-top: 10px;">
-                <label style="font-size: 12px; color: var(--text-secondary); display:block; margin-bottom:5px;">字体链接 (CSS/TTF):</label>
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" id="custom-font-url" class="modal-input" style="margin-bottom:0; font-size:12px;" placeholder="https://example.com/font.woff2">
-                    <button id="apply-font-btn" class="modal-btn modal-btn-primary" style="padding: 5px 10px; font-size: 12px; white-space: nowrap;">应用</button>
-                    <button id="follow-system-font-btn" class="modal-btn modal-btn-secondary" style="padding: 5px 10px; font-size: 12px; white-space: nowrap; margin-left: 5px;">跟随系统</button>
+                <div class="settings-card" style="cursor:pointer;" onclick="hideModal(document.getElementById('appearance-modal'));showModal(document.getElementById('font-bg-modal'))">
+                    <i class="fas fa-font"></i><span>背景 & 字体</span>
                 </div>
-                <div style="font-size: 10px; color: var(--text-secondary); margin-top: 4px; opacity: 0.7;">
-                    提示: 应用后将覆盖默认字体。留空并应用可恢复默认。
+                <div class="settings-card" style="cursor:pointer;" onclick="hideModal(document.getElementById('appearance-modal'));showModal(document.getElementById('bubble-css-modal'))">
+                    <i class="fas fa-comment"></i><span>气泡 & CSS</span>
+                </div>
+                <div class="settings-card" style="cursor:pointer;" onclick="hideModal(document.getElementById('appearance-modal'));showModal(document.getElementById('chat-avatar-settings-modal'))">
+                    <i class="fas fa-user-circle"></i><span>聊天头像</span>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <div id="appearance-panel-background" class="appearance-sub-panel" style="display:none;">
-        <div class="settings-section">
-            <div class="settings-section-title">
-                <i class="fas fa-image"></i>聊天背景
-                <input type="file" id="bg-gallery-input" accept="image/*" style="display: none;">
-            </div>
-            <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;opacity:0.75;line-height:1.5;">
-                支持图片及 GIF 动图。点击 <i class="fas fa-plus" style="font-size:10px;"></i> 添加，点击项目应用。
-            </div>
-            <div class="bg-gallery" id="background-gallery-list"></div>
-            <div style="text-align: center; margin-top: 10px;">
-                <button class="modal-btn modal-btn-secondary" id="reset-default-bg" style="font-size: 12px; padding: 6px 12px;">
-                    <i class="fas fa-undo"></i> 恢复默认背景
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="appearance-panel-bubble" class="appearance-sub-panel" style="display:none;">
-        <div class="settings-section">
-            <div class="settings-section-title">
-                <i class="fas fa-comment"></i>气泡样式
-            </div>
-            <div class="settings-item-list" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <div class="settings-item" data-bubble-style="standard" style="justify-content:center;">
-                    <i class="fas fa-comment"></i><span>标准尖角</span>
-                </div>
-                <div class="settings-item" data-bubble-style="rounded" style="justify-content:center;">
-                    <i class="fas fa-comment-dots"></i><span>圆角</span>
-                </div>
-                <div class="settings-item" data-bubble-style="rounded-large" style="justify-content:center;">
-                    <i class="fas fa-circle"></i><span>大圆角胶囊</span>
-                </div>
-                <div class="settings-item" data-bubble-style="square" style="justify-content:center;">
-                    <i class="fas fa-square"></i><span>方形直角</span>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    <div id="appearance-panel-avatar" class="appearance-sub-panel" style="display:none;">
-        <div class="settings-section">
-            <div class="settings-section-title"><i class="fas fa-user-circle"></i>聊天头像</div>
-            <div id="in-chat-avatar-toggle-2" style="display:flex;align-items:center;gap:12px;background:var(--primary-bg);border:1px solid var(--border-color);border-radius:12px;padding:12px 14px;cursor:pointer;transition:all 0.2s;margin-bottom:10px;">
-                <div style="width:36px;height:36px;border-radius:50%;background:rgba(var(--accent-color-rgb),0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i id="avatar-toggle-icon-2" class="fas fa-user-circle" style="font-size:18px;color:var(--accent-color);"></i>
-                </div>
-                <div style="flex:1;">
-                    <div style="font-size:13px;font-weight:600;color:var(--text-primary);">显示聊天头像</div>
-                    <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;" id="avatar-toggle-status-2">已开启 — 消息旁显示头像</div>
-                </div>
-                <div id="avatar-toggle-pill-2" style="width:44px;height:24px;border-radius:24px;background:var(--accent-color);position:relative;transition:background 0.3s;flex-shrink:0;">
-                    <div id="avatar-toggle-knob-2" style="position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;right:3px;transition:right 0.25s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
-                </div>
-            </div>
-
-            <div id="always-avatar-toggle" style="display:flex;align-items:center;gap:12px;background:var(--primary-bg);border:1px solid var(--border-color);border-radius:12px;padding:12px 14px;cursor:pointer;transition:all 0.2s;margin-bottom:10px;">
-                <div style="width:36px;height:36px;border-radius:50%;background:rgba(var(--accent-color-rgb),0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="fas fa-users" style="font-size:16px;color:var(--accent-color);"></i>
-                </div>
-                <div style="flex:1;">
-                    <div style="font-size:13px;font-weight:600;color:var(--text-primary);">每条消息都显示头像</div>
-                    <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;" id="always-avatar-status">已关闭 — 仅首条消息显示</div>
-                </div>
-                <div id="always-avatar-pill" style="width:44px;height:24px;border-radius:24px;background:var(--border-color);position:relative;transition:background 0.3s;flex-shrink:0;">
-                    <div id="always-avatar-knob" style="position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;right:23px;transition:right 0.25s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
-                </div>
-            </div>
-
-            <div id="partner-name-chat-toggle" style="display:flex;align-items:center;gap:12px;background:var(--primary-bg);border:1px solid var(--border-color);border-radius:12px;padding:12px 14px;cursor:pointer;transition:all 0.2s;margin-bottom:10px;">
-                <div style="width:36px;height:36px;border-radius:50%;background:rgba(var(--accent-color-rgb),0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="fas fa-tag" style="font-size:16px;color:var(--accent-color);"></i>
-                </div>
-                <div style="flex:1;">
-                    <div style="font-size:13px;font-weight:600;color:var(--text-primary);">单人模式显示对方名字</div>
-                    <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;" id="partner-name-chat-status">已关闭</div>
-                </div>
-                <div id="partner-name-chat-pill" style="width:44px;height:24px;border-radius:24px;background:var(--border-color);position:relative;transition:background 0.3s;flex-shrink:0;">
-                    <div id="partner-name-chat-knob" style="position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;right:23px;transition:right 0.25s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
-                </div>
-            </div>
-            <div class="font-size-control" id="in-chat-avatar-size-control-2">
-                <span class="font-size-label">头像尺寸:</span>
-                <input type="range" min="24" max="48" value="36" class="font-size-slider" id="in-chat-avatar-size-slider-2">
-                <span class="font-size-value" id="in-chat-avatar-size-value-2">36px</span>
-            </div>
-            <div id="in-chat-avatar-position-control-2" style="margin-top:10px;">
-                <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;font-weight:500;">头像对齐方式</div>
-                <div style="display:flex;gap:8px;">
-                    <button id="avatar-pos-top-2" class="modal-btn modal-btn-secondary" data-pos="top" style="flex:1;font-size:12px;padding:7px 0;"><i class="fas fa-arrow-up"></i> 顶部</button>
-                    <button id="avatar-pos-center-2" class="modal-btn modal-btn-primary" data-pos="center" style="flex:1;font-size:12px;padding:7px 0;"><i class="fas fa-arrows-alt-v"></i> 居中</button>
-                    <button id="avatar-pos-bottom-2" class="modal-btn modal-btn-secondary" data-pos="bottom" style="flex:1;font-size:12px;padding:7px 0;"><i class="fas fa-arrow-down"></i> 底部</button>
-                    <button id="avatar-pos-custom-2" class="modal-btn modal-btn-secondary" data-pos="custom" style="flex:1;font-size:12px;padding:7px 0;"><i class="fas fa-sliders-h"></i> 自定义</button>
-                </div>
-                <div id="avatar-custom-offset-control" style="display:none;margin-top:10px;">
-                    <div class="font-size-control">
-                        <span class="font-size-label" style="font-size:11px;white-space:nowrap;">偏移量:</span>
-                        <input type="range" min="0" max="80" value="0" class="font-size-slider" id="avatar-custom-offset-slider">
-                        <span class="font-size-value" id="avatar-custom-offset-value">0px</span>
-                    </div>
-                </div>
-            </div>
-            <div id="in-chat-avatar-shape-control-2" style="margin-top:12px;">
-                <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;font-weight:500;">头像形状</div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                    <button class="modal-btn modal-btn-primary avatar-shape-btn-2" data-shape="circle" style="flex:1;font-size:12px;padding:7px 4px;min-width:60px;">● 圆形</button>
-                    <button class="modal-btn modal-btn-secondary avatar-shape-btn-2" data-shape="square" style="flex:1;font-size:12px;padding:7px 4px;min-width:60px;">■ 方形</button>
-                </div>
-                <div id="avatar-corner-radius-control-2" style="margin-top:10px;display:none;">
-                    <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">方形圆角:</div>
-                    <div class="font-size-control">
-                        <span class="font-size-label" style="font-size:11px;white-space:nowrap;">0px</span>
-                        <input type="range" min="0" max="24" value="8" class="font-size-slider" id="avatar-corner-radius-slider-2">
-                        <span class="font-size-value" id="avatar-corner-radius-value-2">8px</span>
-                    </div>
-                </div>
-            </div>
-
-            <div id="avatar-bubble-preview" style="margin-top:14px;background:var(--chat-bg,var(--primary-bg));border-radius:14px;padding:14px 12px;border:1px solid var(--border-color);">
-                <div style="font-size:11px;color:var(--text-secondary);margin-bottom:10px;opacity:0.7;text-align:center;letter-spacing:0.3px;">实时预览效果</div>
-                <div class="preview-msg-row" style="display:flex;align-items:flex-end;gap:8px;margin-bottom:10px;">
-                    <div id="preview-partner-avatar" style="width:var(--in-chat-avatar-size,36px);height:var(--in-chat-avatar-size,36px);border-radius:50%;background:var(--border-color);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;transition:border-radius 0.2s ease;">
-                        <i class="fas fa-user" style="font-size:14px;color:var(--text-secondary);"></i>
-                    </div>
-                    <div style="background:var(--message-received-bg);color:var(--message-received-text);border-radius:16px 16px 16px 4px;padding:9px 13px;font-size:13px;max-width:160px;">
-                        你是我朝夕相伴触手可及的虚拟
-                    </div>
-                </div>
-                <div class="preview-msg-row" style="display:flex;align-items:flex-end;gap:8px;justify-content:flex-end;">
-                    <div style="background:var(--message-sent-bg);color:var(--message-sent-text);border-radius:16px 16px 4px 16px;padding:9px 13px;font-size:13px;max-width:160px;">
-                        你是我未曾拥有无法捕捉的亲昵
-                    </div>
-                    <div id="preview-my-avatar" style="width:var(--in-chat-avatar-size,36px);height:var(--in-chat-avatar-size,36px);border-radius:50%;background:var(--border-color);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;transition:border-radius 0.2s ease;">
-                        <i class="fas fa-user" style="font-size:14px;color:var(--text-secondary);"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="settings-section">
-            <div class="settings-section-title"><i class="fas fa-id-badge"></i>头像框设置</div>
-            <h4 style="font-size:13px;font-weight:600;margin:10px 0 8px;color:var(--text-primary);">我的头像框</h4>
-            <div class="frame-settings-container">
-                <div class="frame-preview-wrapper">
-                    <div class="frame-preview" id="my-frame-preview-2">
-                        <div class="preview-bg-layer"><i class="fas fa-user"></i></div>
-                    </div>
-                    <div class="frame-upload-actions">
-                        <button class="modal-btn modal-btn-secondary" id="my-frame-upload-btn-2" style="padding:6px 12px;font-size:12px;"><i class="fas fa-upload" style="margin-right:4px;"></i>上传</button>
-                        <button class="modal-btn modal-btn-secondary" id="my-frame-url-btn-2" style="padding:6px 12px;font-size:12px;"><i class="fas fa-link" style="margin-right:4px;"></i>URL</button>
-                        <button class="modal-btn modal-btn-secondary" id="my-frame-remove-btn-2" style="padding:6px 12px;font-size:12px;"><i class="fas fa-trash" style="margin-right:4px;"></i>移除</button>
-                    </div>
-                </div>
-                <div class="frame-controls">
-                    <div class="frame-slider-group">
-                        <label for="my-frame-size-2">大小</label>
-                        <input type="range" id="my-frame-size-2" min="50" max="200" value="100">
-                        <span id="my-frame-size-value-2">100%</span>
-                    </div>
-                    <div class="frame-slider-group">
-                        <label for="my-frame-offset-x-2">左右</label>
-                        <input type="range" id="my-frame-offset-x-2" min="-50" max="50" value="0">
-                        <span id="my-frame-offset-x-value-2">0px</span>
-                    </div>
-                    <div class="frame-slider-group">
-                        <label for="my-frame-offset-y-2">上下</label>
-                        <input type="range" id="my-frame-offset-y-2" min="-50" max="50" value="0">
-                        <span id="my-frame-offset-y-value-2">0px</span>
-                    </div>
-                </div>
-            </div>
-            <input type="file" id="my-frame-file-input-2" class="file-input" accept="image/png, image/webp, image/gif">
-
-            <h4 style="font-size:13px;font-weight:600;margin:20px 0 8px;border-top:1px dashed var(--border-color);padding-top:14px;color:var(--text-primary);">梦角的头像框</h4>
-            <div class="frame-settings-container">
-                <div class="frame-preview-wrapper">
-                    <div class="frame-preview" id="partner-frame-preview-2">
-                        <div class="preview-bg-layer"><i class="fas fa-user"></i></div>
-                    </div>
-                    <div class="frame-upload-actions">
-                        <button class="modal-btn modal-btn-secondary" id="partner-frame-upload-btn-2" style="padding:6px 12px;font-size:12px;"><i class="fas fa-upload" style="margin-right:4px;"></i>上传</button>
-                        <button class="modal-btn modal-btn-secondary" id="partner-frame-url-btn-2" style="padding:6px 12px;font-size:12px;"><i class="fas fa-link" style="margin-right:4px;"></i>URL</button>
-                        <button class="modal-btn modal-btn-secondary" id="partner-frame-remove-btn-2" style="padding:6px 12px;font-size:12px;"><i class="fas fa-trash" style="margin-right:4px;"></i>移除</button>
-                    </div>
-                </div>
-                <div class="frame-controls">
-                    <div class="frame-slider-group">
-                        <label for="partner-frame-size-2">大小</label>
-                        <input type="range" id="partner-frame-size-2" min="50" max="200" value="100">
-                        <span id="partner-frame-size-value-2">100%</span>
-                    </div>
-                    <div class="frame-slider-group">
-                        <label for="partner-frame-offset-x-2">左右</label>
-                        <input type="range" id="partner-frame-offset-x-2" min="-50" max="50" value="0">
-                        <span id="partner-frame-offset-x-value-2">0px</span>
-                    </div>
-                    <div class="frame-slider-group">
-                        <label for="partner-frame-offset-y-2">上下</label>
-                        <input type="range" id="partner-frame-offset-y-2" min="-50" max="50" value="0">
-                        <span id="partner-frame-offset-y-value-2">0px</span>
-                    </div>
-                </div>
-            </div>
-            <input type="file" id="partner-frame-file-input-2" class="file-input" accept="image/png, image/webp, image/gif">
-        </div>
-    </div>
-
-    <div id="appearance-panel-css" class="appearance-sub-panel" style="display:none;">
-        <div class="settings-section">
-            <div class="settings-section-title"><i class="fas fa-comment-alt"></i>气泡 CSS</div>
-            <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;line-height:1.5;">针对聊天气泡的样式覆盖，选择器限定在消息范围内。</div>
-            <textarea id="custom-bubble-css" class="modal-textarea" style="font-family: monospace; font-size: 12px; height: 130px; white-space: pre;" placeholder=".message-sent {
-  border-radius: 20px 20px 0 20px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-.message-received {
-  border-bottom: 2px solid var(--accent-color);
-}"></textarea>
-            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top:8px;">
-                <button id="reset-css-btn" class="modal-btn modal-btn-secondary" style="padding: 6px 12px; font-size: 12px;">清空</button>
-                <button id="apply-css-btn" class="modal-btn modal-btn-primary" style="padding: 6px 12px; font-size: 12px;">应用 CSS</button>
-            </div>
-            <div style="margin-top:14px;">
-                <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;font-weight:500;letter-spacing:0.3px;">实时预览</div>
-                <div id="css-live-preview" style="background:var(--chat-bg,var(--primary-bg));border-radius:14px;padding:14px 12px;border:1px solid var(--border-color);">
-                    <div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:10px;">
-                        <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-color);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-                            <i class="fas fa-user" style="font-size:12px;color:#fff;"></i>
-                        </div>
-                        <div class="message message-received" style="max-width:180px;">你是我朝夕相伴触手可及的虚拟</div>
-                    </div>
-                    <div style="display:flex;align-items:flex-end;gap:8px;justify-content:flex-end;">
-                        <div class="message message-sent" style="max-width:180px;">你是我未曾拥有无法捕捉的亲昵</div>
-                        <div style="width:32px;height:32px;border-radius:50%;background:var(--border-color);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-                            <i class="fas fa-user" style="font-size:12px;color:var(--text-secondary);"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="settings-section" style="margin-top:18px;">
-            <div class="settings-section-title"><i class="fas fa-paint-brush"></i>全局主题 CSS</div>
-            <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;line-height:1.5;">作用于整个页面的 CSS，可覆盖任意元素样式、CSS 变量、布局等。支持完整的 CSS 语法。</div>
-            <textarea id="custom-global-css" class="modal-textarea" style="font-family: monospace; font-size: 12px; height: 160px; white-space: pre;" placeholder=":root {
-  --accent-color: #ff6b9d;
-  --primary-bg: #0d0d14;
-  --border-color: rgba(255,255,255,0.08);
-}
-
-#partner-info {
-  background: linear-gradient(135deg, #1a1a2e, #16213e);
-}
-
-#message-input {
-  border-radius: 20px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--accent-color);
-  border-radius: 4px;
-}"></textarea>
-            <div style="display: flex; justify-content: space-between; align-items:center; gap: 10px; margin-top:8px;">
-                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;">
-                    <input type="checkbox" id="global-css-live-toggle" style="width:14px;height:14px;accent-color:var(--accent-color);">
-                    实时应用
-                </label>
-                <div style="display:flex;gap:8px;">
-                    <button id="reset-global-css-btn" class="modal-btn modal-btn-secondary" style="padding: 6px 12px; font-size: 12px;">清空</button>
-                    <button id="apply-global-css-btn" class="modal-btn modal-btn-primary" style="padding: 6px 12px; font-size: 12px;">应用 CSS</button>
-                </div>
-            </div>
-            <div id="global-css-status" style="display:none;margin-top:8px;font-size:11px;color:var(--text-secondary);padding:6px 10px;background:rgba(var(--accent-color-rgb),0.06);border-radius:8px;"></div>
-        </div>
-    </div>
-</div>
-
+        
             <div class="modal-buttons" style="position:sticky;bottom:0;background:var(--secondary-bg);border-top:1px solid var(--border-color);padding:12px 0 0;z-index:10;margin-top:8px;margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px;padding-bottom:max(12px, env(safe-area-inset-bottom, 0px));">
-                <button class="modal-btn modal-btn-secondary" id="back-appearance" onclick="(function(){hideModal(document.getElementById('appearance-modal'));showModal(document.getElementById('settings-modal'))})()">
+                <button class="modal-btn modal-btn-secondary" onclick="(function(){hideModal(document.getElementById('appearance-modal'));showModal(document.getElementById('settings-modal'))})()">
                     <i class="fas fa-arrow-left"></i> 返回
                 </button>
-                <button class="modal-btn modal-btn-secondary" id="close-appearance">关闭</button>
+                <button class="modal-btn modal-btn-secondary" onclick="hideModal(document.getElementById('appearance-modal'))">关闭</button>
             </div>
         </div>
     </div>
+       <div class="modal" id="theme-modal">
+  <div class="modal-content">
+    <div class="modal-title">
+      <i class="fas fa-paint-roller"></i><span>主题配色</span>
+    </div>
+    
+    <div class="settings-section">
+      <div class="settings-section-title"><i class="fas fa-sun"></i>显示模式</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--secondary-bg);border-radius:12px;margin-bottom:12px;">
+        <div>
+          <div style="font-size:14px;font-weight:500;color:var(--text-primary);">日间 / 夜间模式</div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">切换浅色和深色主题</div>
+        </div>
+        <label class="theme-switch">
+          <input type="checkbox" id="theme-mode-toggle">
+          <span class="theme-switch-slider"></span>
+        </label>
+      </div>
+    </div>
+    
+    <div class="settings-section">
+      <div class="settings-section-title"><i class="fas fa-paint-roller"></i>主题配色</div>
+      <div class="appearance-group" style="margin-bottom:0;">
+        <div class="theme-editor-entry-btn" id="open-theme-editor">
+          <i class="fas fa-sliders-h"></i>
+          <span>自定义<br>编辑器</span>
+        </div>
+        <div class="preset-colors-container">
+          <div class="preset-colors-title"><i class="fas fa-swatchbook"></i> 快捷换肤</div>
+          <div class="theme-picker">
+            <button class="theme-color-btn" id="theme-gold" data-theme="gold" title="金色"></button>
+            <button class="theme-color-btn" id="theme-blue" data-theme="blue" title="蓝色"></button>
+            <button class="theme-color-btn" id="theme-purple" data-theme="purple" title="紫色"></button>
+            <button class="theme-color-btn" id="theme-green" data-theme="green" title="绿色"></button>
+            <button class="theme-color-btn" id="theme-pink" data-theme="pink" title="粉色"></button>
+            <button class="theme-color-btn" id="theme-black-white" data-theme="black-white" title="黑白"></button>
+            <button class="theme-color-btn" id="theme-pastel" data-theme="pastel" title="红色"></button>
+            <button class="theme-color-btn" id="theme-sunset" data-theme="sunset" title="橙色"></button>
+            <button class="theme-color-btn" id="theme-forest" data-theme="forest" title="深绿"></button>
+            <button class="theme-color-btn" id="theme-ocean" data-theme="ocean" title="深蓝"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="settings-section" id="theme-schemes-section">
+      <div class="settings-section-title">
+        <i class="fas fa-layer-group"></i>主题方案
+        <button id="save-theme-scheme-btn" class="modal-btn modal-btn-primary" style="padding:4px 10px; font-size:11px; margin-left:auto;">
+          <i class="fas fa-plus"></i> 保存当前
+        </button>
+      </div>
+      <div style="font-size:11px;color:var(--text-secondary);opacity:0.7;margin-bottom:8px;">保存当前所有外观设置，方便快速切换</div>
+      <div id="theme-schemes-list" class="theme-schemes-list">
+        <div class="theme-schemes-empty" id="theme-schemes-empty">
+          <i class="fas fa-paint-brush"></i>
+          <span>暂无保存的方案，点击"保存当前"试试~</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal-buttons" style="position:sticky;bottom:0;background:var(--secondary-bg);border-top:1px solid var(--border-color);padding:12px 0 0;z-index:10;margin-top:8px;margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px;padding-bottom:max(12px, env(safe-area-inset-bottom, 0px));">
+      <button class="modal-btn modal-btn-secondary" onclick="hideModal(document.getElementById('theme-modal'));showModal(document.getElementById('appearance-modal'))">
+        <i class="fas fa-arrow-left"></i> 返回
+      </button>
+      <button class="modal-btn modal-btn-secondary" onclick="hideModal(document.getElementById('theme-modal'))">关闭</button>
+    </div>
+  </div>
+</div>
 
+<div class="modal" id="font-bg-modal">
+  <div class="modal-content">
+    <div class="modal-title">
+      <i class="fas fa-font"></i><span>背景 & 字体</span>
+    </div>
+
+    <div class="settings-section">
+        <div class="settings-section-title"><i class="fas fa-font"></i>字体设置</div>
+        
+        <div class="font-size-control">
+            <span class="font-size-label">大小:</span>
+            <input type="range" min="12" max="24" value="16" class="font-size-slider" id="font-size-slider">
+            <span class="font-size-value" id="font-size-value">16px</span>
+        </div>
+
+        <!-- 主：本地字体上传区 -->
+        <div style="margin-top: 14px; padding: 16px; background: rgba(var(--accent-color-rgb), 0.05); border: 1.5px dashed rgba(var(--accent-color-rgb), 0.3); border-radius: 14px; text-align: center;">
+            <input type="file" id="local-font-file-input" accept=".ttf,.woff,.woff2,.otf" style="display:none;">
+            <i class="fas fa-cloud-upload-alt" style="font-size: 22px; color: var(--accent-color); opacity: 0.8; display: block; margin-bottom: 8px;"></i>
+            <button id="local-font-upload-btn" style="background: var(--accent-color); color: #fff; border: none; padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(var(--accent-color-rgb), 0.35); font-family: var(--font-family);">
+            📁 选择本地字体文件
+            </button>
+            <div id="local-font-name" style="font-size: 11px; color: var(--text-secondary); margin-top: 10px; min-height: 16px;">支持 .ttf / .woff / .woff2 / .otf 格式</div>
+        </div>
+        <!-- 次：外部链接区 -->
+        <div style="margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border-color); opacity: 0.55; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='0.55'">
+            <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; text-align: center;">或者使用外部字体链接</div>
+            <div style="display: flex; gap: 8px;">
+            <input type="text" id="custom-font-url" class="modal-input" style="margin-bottom:0; font-size:12px;" placeholder="https://example.com/font.woff2">
+            <button id="apply-font-btn" class="modal-btn modal-btn-secondary" style="padding: 5px 10px; font-size: 12px; white-space: nowrap;">应用</button>
+            </div>
+        </div>      
+        <!-- 独立重置按钮 -->
+        <div style="text-align: center; margin-top: 12px;">
+            <button id="clear-local-font-btn" class="modal-btn modal-btn-secondary" style="padding: 6px 16px; font-size: 12px;">
+            <i class="fas fa-undo" style="margin-right: 4px;"></i>恢复默认字体
+            </button>
+        </div>
+    </div>
+
+
+
+    
+    <div class="settings-section" style="margin-top: 20px;">
+      <div class="settings-section-title">
+        <i class="fas fa-image"></i>聊天背景
+        <input type="file" id="bg-gallery-input" accept="image/*" style="display: none;">
+      </div>
+      <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;opacity:0.75;line-height:1.5;">
+        支持图片及 GIF 动图。点击 <i class="fas fa-plus" style="font-size:10px;"></i> 添加，点击项目应用。
+      </div>
+      <div class="bg-gallery" id="background-gallery-list"></div>
+      <div style="text-align: center; margin-top: 10px;">
+        <button class="modal-btn modal-btn-secondary" id="reset-default-bg" style="font-size: 12px; padding: 6px 12px;">
+          <i class="fas fa-undo"></i> 恢复默认背景
+        </button>
+      </div>
+    </div>
+    
+    <div class="modal-buttons" style="position:sticky;bottom:0;background:var(--secondary-bg);border-top:1px solid var(--border-color);padding:12px 0 0;z-index:10;margin-top:8px;margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px;padding-bottom:max(12px, env(safe-area-inset-bottom, 0px));">
+      <button class="modal-btn modal-btn-secondary" onclick="hideModal(document.getElementById('font-bg-modal'));showModal(document.getElementById('appearance-modal'))">
+        <i class="fas fa-arrow-left"></i> 返回
+      </button>
+      <button class="modal-btn modal-btn-secondary" onclick="hideModal(document.getElementById('font-bg-modal'))">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="bubble-css-modal">
+  <div class="modal-content">
+    <div class="modal-title">
+      <i class="fas fa-comment"></i><span>气泡 & CSS</span>
+    </div>
+    
+    <div class="settings-section">
+      <div class="settings-section-title">
+        <i class="fas fa-comment"></i>气泡样式
+      </div>
+      <div class="settings-item-list" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="settings-item" data-bubble-style="standard" style="justify-content:center;">
+          <i class="fas fa-comment"></i><span>标准尖角</span>
+        </div>
+        <div class="settings-item" data-bubble-style="rounded" style="justify-content:center;">
+          <i class="fas fa-comment-dots"></i><span>圆角</span>
+        </div>
+        <div class="settings-item" data-bubble-style="rounded-large" style="justify-content:center;">
+          <i class="fas fa-circle"></i><span>大圆角胶囊</span>
+        </div>
+        <div class="settings-item" data-bubble-style="square" style="justify-content:center;">
+          <i class="fas fa-square"></i><span>方形直角</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="settings-section" style="margin-top: 20px;">
+      <div class="settings-section-title"><i class="fas fa-comment-alt"></i>气泡 CSS</div>
+      <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;line-height:1.5;">针对聊天气泡的样式覆盖，选择器限定在消息范围内。</div>
+      <textarea id="custom-bubble-css" class="modal-textarea" style="font-family: monospace; font-size: 12px; height: 130px; white-space: pre;" placeholder=".message-sent { border-radius: 20px 20px 0 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); } .message-received { border-bottom: 2px solid var(--accent-color); }"></textarea>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top:8px;">
+        <button id="reset-css-btn" class="modal-btn modal-btn-secondary" style="padding: 6px 12px; font-size: 12px;">清空</button>
+        <button id="apply-css-btn" class="modal-btn modal-btn-primary" style="padding: 6px 12px; font-size: 12px;">应用 CSS</button>
+      </div>
+      <div style="margin-top:14px;">
+        <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;font-weight:500;letter-spacing:0.3px;">实时预览</div>
+        <div id="css-live-preview" style="background:var(--chat-bg,var(--primary-bg));border-radius:14px;padding:14px 12px;border:1px solid var(--border-color);">
+          <div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:10px;">
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-color);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+              <i class="fas fa-user" style="font-size:12px;color:#fff;"></i>
+            </div>
+            <div class="message message-received" style="max-width:180px;">你是我朝夕相伴触手可及的虚拟</div>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:8px;justify-content:flex-end;">
+            <div class="message message-sent" style="max-width:180px;">你是我未曾拥有无法捕捉的亲昵</div>
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--border-color);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+              <i class="fas fa-user" style="font-size:12px;color:var(--text-secondary);"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="settings-section" style="margin-top:18px;">
+      <div class="settings-section-title"><i class="fas fa-paint-brush"></i>全局主题 CSS</div>
+      <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;line-height:1.5;">作用于整个页面的 CSS，可覆盖任意元素样式、CSS 变量、布局等。支持完整的 CSS 语法。</div>
+      <textarea id="custom-global-css" class="modal-textarea" style="font-family: monospace; font-size: 12px; height: 160px; white-space: pre;" placeholder=":root { --accent-color: #ff6b9d; --primary-bg: #0d0d14; --border-color: rgba(255,255,255,0.08); } #partner-info { background: linear-gradient(135deg, #1a1a2e, #16213e); } #message-input { border-radius: 20px; } ::-webkit-scrollbar-thumb { background: var(--accent-color); border-radius: 4px; }"></textarea>
+      <div style="display: flex; justify-content: space-between; align-items:center; gap: 10px; margin-top:8px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;">
+          <input type="checkbox" id="global-css-live-toggle" style="width:14px;height:14px;accent-color:var(--accent-color);">
+          实时应用
+        </label>
+        <div style="display:flex;gap:8px;">
+          <button id="reset-global-css-btn" class="modal-btn modal-btn-secondary" style="padding: 6px 12px; font-size: 12px;">清空</button>
+          <button id="apply-global-css-btn" class="modal-btn modal-btn-primary" style="padding: 6px 12px; font-size: 12px;">应用 CSS</button>
+        </div>
+      </div>
+      <div id="global-css-status" style="display:none;margin-top:8px;font-size:11px;color:var(--text-secondary);padding:6px 10px;background:rgba(var(--accent-color-rgb),0.06);border-radius:8px;"></div>
+    </div>
+    
+    <div class="modal-buttons" style="position:sticky;bottom:0;background:var(--secondary-bg);border-top:1px solid var(--border-color);padding:12px 0 0;z-index:10;margin-top:8px;margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px;padding-bottom:max(12px, env(safe-area-inset-bottom, 0px));">
+      <button class="modal-btn modal-btn-secondary" onclick="hideModal(document.getElementById('bubble-css-modal'));showModal(document.getElementById('appearance-modal'))">
+        <i class="fas fa-arrow-left"></i> 返回
+      </button>
+      <button class="modal-btn modal-btn-secondary" onclick="hideModal(document.getElementById('bubble-css-modal'))">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="chat-avatar-settings-modal">
+  <div class="modal-content">
+    <div class="modal-title">
+      <i class="fas fa-user-circle"></i><span>聊天头像</span>
+    </div>
+    
+    <div class="settings-section">
+      <div class="settings-section-title"><i class="fas fa-user-circle"></i>聊天头像</div>
+      
+      <div id="in-chat-avatar-toggle-2" style="display:flex;align-items:center;gap:12px;background:var(--primary-bg);border:1px solid var(--border-color);border-radius:12px;padding:12px 14px;cursor:pointer;transition:all 0.2s;margin-bottom:10px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(var(--accent-color-rgb),0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i id="avatar-toggle-icon-2" class="fas fa-user-circle" style="font-size:18px;color:var(--accent-color);"></i>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:var(--text-primary);">显示聊天头像</div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;" id="avatar-toggle-status-2">已开启 — 消息旁显示头像</div>
+        </div>
+        <div id="avatar-toggle-pill-2" style="width:44px;height:24px;border-radius:24px;background:var(--accent-color);position:relative;transition:background 0.3s;flex-shrink:0;">
+          <div id="avatar-toggle-knob-2" style="position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;right:3px;transition:right 0.25s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+        </div>
+      </div>
+      
+      <div id="always-avatar-toggle" style="display:flex;align-items:center;gap:12px;background:var(--primary-bg);border:1px solid var(--border-color);border-radius:12px;padding:12px 14px;cursor:pointer;transition:all 0.2s;margin-bottom:10px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(var(--accent-color-rgb),0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fas fa-users" style="font-size:16px;color:var(--accent-color);"></i>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:var(--text-primary);">每条消息都显示头像</div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;" id="always-avatar-status">已关闭 — 仅首条消息显示</div>
+        </div>
+        <div id="always-avatar-pill" style="width:44px;height:24px;border-radius:24px;background:var(--border-color);position:relative;transition:background 0.3s;flex-shrink:0;">
+          <div id="always-avatar-knob" style="position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;right:23px;transition:right 0.25s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+        </div>
+      </div>
+      
+      <div id="partner-name-chat-toggle" style="display:flex;align-items:center;gap:12px;background:var(--primary-bg);border:1px solid var(--border-color);border-radius:12px;padding:12px 14px;cursor:pointer;transition:all 0.2s;margin-bottom:10px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(var(--accent-color-rgb),0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fas fa-tag" style="font-size:16px;color:var(--accent-color);"></i>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:var(--text-primary);">单人模式显示对方名字</div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;" id="partner-name-chat-status">已关闭</div>
+        </div>
+        <div id="partner-name-chat-pill" style="width:44px;height:24px;border-radius:24px;background:var(--border-color);position:relative;transition:background 0.3s;flex-shrink:0;">
+          <div id="partner-name-chat-knob" style="position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;right:23px;transition:right 0.25s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div>
+        </div>
+      </div>
+      
+      <div class="font-size-control" id="in-chat-avatar-size-control-2">
+        <span class="font-size-label">头像尺寸:</span>
+        <input type="range" min="24" max="48" value="36" class="font-size-slider" id="in-chat-avatar-size-slider-2">
+        <span class="font-size-value" id="in-chat-avatar-size-value-2">36px</span>
+      </div>
+      
+      <div id="in-chat-avatar-position-control-2" style="margin-top:10px;">
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;font-weight:500;">头像对齐方式</div>
+        <div style="display:flex;gap:8px;">
+          <button id="avatar-pos-top-2" class="modal-btn modal-btn-secondary" data-pos="top" style="flex:1;font-size:12px;padding:7px 0;"><i class="fas fa-arrow-up"></i> 顶部</button>
+          <button id="avatar-pos-center-2" class="modal-btn modal-btn-primary" data-pos="center" style="flex:1;font-size:12px;padding:7px 0;"><i class="fas fa-arrows-alt-v"></i> 居中</button>
+          <button id="avatar-pos-bottom-2" class="modal-btn modal-btn-secondary" data-pos="bottom" style="flex:1;font-size:12px;padding:7px 0;"><i class="fas fa-arrow-down"></i> 底部</button>
+          <button id="avatar-pos-custom-2" class="modal-btn modal-btn-secondary" data-pos="custom" style="flex:1;font-size:12px;padding:7px 0;"><i class="fas fa-sliders-h"></i> 自定义</button>
+        </div>
+        <div id="avatar-custom-offset-control" style="display:none;margin-top:10px;">
+          <div class="font-size-control">
+            <span class="font-size-label" style="font-size:11px;white-space:nowrap;">偏移量:</span>
+            <input type="range" min="0" max="80" value="0" class="font-size-slider" id="avatar-custom-offset-slider">
+            <span class="font-size-value" id="avatar-custom-offset-value">0px</span>
+          </div>
+        </div>
+      </div>
+      
+      <div id="in-chat-avatar-shape-control-2" style="margin-top:12px;">
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;font-weight:500;">头像形状</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="modal-btn modal-btn-primary avatar-shape-btn-2" data-shape="circle" style="flex:1;font-size:12px;padding:7px 4px;min-width:60px;">● 圆形</button>
+          <button class="modal-btn modal-btn-secondary avatar-shape-btn-2" data-shape="square" style="flex:1;font-size:12px;padding:7px 4px;min-width:60px;">■ 方形</button>
+        </div>
+        <div id="avatar-corner-radius-control-2" style="margin-top:10px;display:none;">
+          <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">方形圆角:</div>
+          <div class="font-size-control">
+            <span class="font-size-label" style="font-size:11px;white-space:nowrap;">0px</span>
+            <input type="range" min="0" max="24" value="8" class="font-size-slider" id="avatar-corner-radius-slider-2">
+            <span class="font-size-value" id="avatar-corner-radius-value-2">8px</span>
+          </div>
+        </div>
+      </div>
+      
+      <div id="avatar-bubble-preview" style="margin-top:14px;background:var(--chat-bg,var(--primary-bg));border-radius:14px;padding:14px 12px;border:1px solid var(--border-color);">
+        <div style="font-size:11px;color:var(--text-secondary);margin-bottom:10px;opacity:0.7;text-align:center;letter-spacing:0.3px;">实时预览效果</div>
+        <div class="preview-msg-row" style="display:flex;align-items:flex-end;gap:8px;margin-bottom:10px;">
+          <div id="preview-partner-avatar" style="width:var(--in-chat-avatar-size,36px);height:var(--in-chat-avatar-size,36px);border-radius:50%;background:var(--border-color);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;transition:border-radius 0.2s ease;">
+            <i class="fas fa-user" style="font-size:14px;color:var(--text-secondary);"></i>
+          </div>
+          <div style="background:var(--message-received-bg);color:var(--message-received-text);border-radius:16px 16px 16px 4px;padding:9px 13px;font-size:13px;max-width:160px;">
+            你是我朝夕相伴触手可及的虚拟
+          </div>
+        </div>
+        <div class="preview-msg-row" style="display:flex;align-items:flex-end;gap:8px;justify-content:flex-end;">
+          <div style="background:var(--message-sent-bg);color:var(--message-sent-text);border-radius:16px 16px 4px 16px;padding:9px 13px;font-size:13px;max-width:160px;">
+            你是我未曾拥有无法捕捉的亲昵
+          </div>
+          <div id="preview-my-avatar" style="width:var(--in-chat-avatar-size,36px);height:var(--in-chat-avatar-size,36px);border-radius:50%;background:var(--border-color);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;transition:border-radius 0.2s ease;">
+            <i class="fas fa-user" style="font-size:14px;color:var(--text-secondary);"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="settings-section">
+      <div class="settings-section-title"><i class="fas fa-id-badge"></i>头像框设置</div>
+      <h4 style="font-size:13px;font-weight:600;margin:10px 0 8px;color:var(--text-primary);">我的头像框</h4>
+      <div class="frame-settings-container">
+        <div class="frame-preview-wrapper">
+          <div class="frame-preview" id="my-frame-preview-2">
+            <div class="preview-bg-layer"><i class="fas fa-user"></i></div>
+          </div>
+          <div class="frame-upload-actions">
+            <button class="modal-btn modal-btn-secondary" id="my-frame-upload-btn-2" style="padding:6px 12px;font-size:12px;"><i class="fas fa-upload" style="margin-right:4px;"></i>上传</button>
+            <button class="modal-btn modal-btn-secondary" id="my-frame-url-btn-2" style="padding:6px 12px;font-size:12px;"><i class="fas fa-link" style="margin-right:4px;"></i>URL</button>
+            <button class="modal-btn modal-btn-secondary" id="my-frame-remove-btn-2" style="padding:6px 12px;font-size:12px;"><i class="fas fa-trash" style="margin-right:4px;"></i>移除</button>
+          </div>
+        </div>
+        <div class="frame-controls">
+          <div class="frame-slider-group">
+            <label for="my-frame-size-2">大小</label>
+            <input type="range" id="my-frame-size-2" min="50" max="200" value="100">
+            <span id="my-frame-size-value-2">100%</span>
+          </div>
+          <div class="frame-slider-group">
+            <label for="my-frame-offset-x-2">左右</label>
+            <input type="range" id="my-frame-offset-x-2" min="-50" max="50" value="0">
+            <span id="my-frame-offset-x-value-2">0px</span>
+          </div>
+          <div class="frame-slider-group">
+            <label for="my-frame-offset-y-2">上下</label>
+            <input type="range" id="my-frame-offset-y-2" min="-50" max="50" value="0">
+            <span id="my-frame-offset-y-value-2">0px</span>
+          </div>
+        </div>
+      </div>
+      <input type="file" id="my-frame-file-input-2" class="file-input" accept="image/png, image/webp, image/gif">
+      
+      <h4 style="font-size:13px;font-weight:600;margin:20px 0 8px;border-top:1px dashed var(--border-color);padding-top:14px;color:var(--text-primary);">梦角的头像框</h4>
+      <div class="frame-settings-container">
+        <div class="frame-preview-wrapper">
+          <div class="frame-preview" id="partner-frame-preview-2">
+            <div class="preview-bg-layer"><i class="fas fa-user"></i></div>
+          </div>
+          <div class="frame-upload-actions">
+            <button class="modal-btn modal-btn-secondary" id="partner-frame-upload-btn-2" style="padding:6px 12px;font-size:12px;"><i class="fas fa-upload" style="margin-right:4px;"></i>上传</button>
+            <button class="modal-btn modal-btn-secondary" id="partner-frame-url-btn-2" style="padding:6px 12px;font-size:12px;"><i class="fas fa-link" style="margin-right:4px;"></i>URL</button>
+            <button class="modal-btn modal-btn-secondary" id="partner-frame-remove-btn-2" style="padding:6px 12px;font-size:12px;"><i class="fas fa-trash" style="margin-right:4px;"></i>移除</button>
+          </div>
+        </div>
+        <div class="frame-controls">
+          <div class="frame-slider-group">
+            <label for="partner-frame-size-2">大小</label>
+            <input type="range" id="partner-frame-size-2" min="50" max="200" value="100">
+            <span id="partner-frame-size-value-2">100%</span>
+          </div>
+          <div class="frame-slider-group">
+            <label for="partner-frame-offset-x-2">左右</label>
+            <input type="range" id="partner-frame-offset-x-2" min="-50" max="50" value="0">
+            <span id="partner-frame-offset-x-value-2">0px</span>
+          </div>
+          <div class="frame-slider-group">
+            <label for="partner-frame-offset-y-2">上下</label>
+            <input type="range" id="partner-frame-offset-y-2" min="-50" max="50" value="0">
+            <span id="partner-frame-offset-y-value-2">0px</span>
+          </div>
+        </div>
+      </div>
+      <input type="file" id="partner-frame-file-input-2" class="file-input" accept="image/png, image/webp, image/gif">
+    </div>
+    
+    <div class="modal-buttons" style="position:sticky;bottom:0;background:var(--secondary-bg);border-top:1px solid var(--border-color);padding:12px 0 0;z-index:10;margin-top:8px;margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px;padding-bottom:max(12px, env(safe-area-inset-bottom, 0px));">
+      <button class="modal-btn modal-btn-secondary" onclick="hideModal(document.getElementById('chat-avatar-settings-modal'));showModal(document.getElementById('appearance-modal'))">
+        <i class="fas fa-arrow-left"></i> 返回
+      </button>
+      <button class="modal-btn modal-btn-secondary" onclick="hideModal(document.getElementById('chat-avatar-settings-modal'))">关闭</button>
+    </div>
+  </div>
+</div>
 
 
     <div class="modal" id="chat-modal">
@@ -2517,6 +2483,8 @@
     <script src="js/features/theme-editor.js"></script>
     <script src="js/features/daily-greeting.js"></script>
     <script src="js/features/appearance.js"></script>
+    <script src="js/features/quick-panel.js"></script>
+
 <!--fuction-->
     <script src="js/highfunctions/anniversary.js"></script>
     <script src="js/highfunctions/calendar.js"></script>

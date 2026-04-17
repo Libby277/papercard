@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // initAnniversaryModule?.(),  ← 删掉这行，setupEventListeners 里面已经调过了
         initMoodListeners?.(),
         initDecisionModule?.(),
-        initComboMenu?.()
+       // initComboMenu?.()
         ]));
 
 
@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window._keepKeyboardAlive = !!settings.keepKeyboardAlive;
 
         // ====== 页面加载时，恢复用户自定义的字体设置 ======
-        if (settings.customFontUrl && settings.customFontUrl.trim()) {
+       /* if (settings.customFontUrl && settings.customFontUrl.trim()) {
         applyCustomFont(settings.customFontUrl.trim()).catch(err => {
             console.warn('初始化加载自定义字体失败，已回退默认字体:', err);
         });
@@ -126,6 +126,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 如果之前存过字体栈（比如跟随系统），也直接应用
         document.documentElement.style.setProperty('--font-family', settings.messageFontFamily);
         document.documentElement.style.setProperty('--message-font-family', settings.messageFontFamily);
+        }*/
+         // 初始化字体（支持本地文件和外部链接）
+        if (settings.useLocalFont || (settings.customFontUrl && settings.customFontUrl.trim())) {
+            applyCurrentFont().catch(err => {
+            console.warn('初始化加载自定义字体失败，已回退默认字体:', err);
+            });
+        } else if (settings.messageFontFamily) {
+            document.documentElement.style.setProperty('--font-family', settings.messageFontFamily);
+            document.documentElement.style.setProperty('--message-font-family', settings.messageFontFamily);
         }
 
         updateLoader('正在渲染我们的世界...', '70%');
@@ -260,8 +269,8 @@ const stickerInput = document.getElementById('sticker-file-input');
                     e.target.value = '';
                 });
             }
-const myStickerQuickUpload = document.getElementById('my-sticker-quick-upload');
-if (myStickerQuickUpload) {
+//const myStickerQuickUpload = document.getElementById('my-sticker-quick-upload');
+/*if (myStickerQuickUpload) {
     myStickerQuickUpload.addEventListener('change', async (e) => {
         const files = Array.from(e.target.files);
         if (!files.length) return;
@@ -283,7 +292,7 @@ if (myStickerQuickUpload) {
         showNotification(fail > 0 ? `上传完成：${ok} 成功 ${fail} 失败` : `✓ 已添加 ${ok} 张到我的表情库`, fail > 0 ? 'warning' : 'success');
         e.target.value = '';
     });
-}
+}*/
 
 window.addEventListener('load', function() {
     setTimeout(function() {

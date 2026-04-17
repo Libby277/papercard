@@ -722,7 +722,7 @@ async function generateScreenshot(msgs) {
         const showAvatar = localStorage.getItem('screenshot-show-avatar') === 'true';
 
         // 【修复位置】定义头像圆角
-        let avatarRadius = '20%'; 
+        /*let avatarRadius = '20%'; 
         try {
             const radiusVar = computedStyle.getPropertyValue('--avatar-corner-radius').trim();
             if (radiusVar && radiusVar !== '0px' && radiusVar !== '50%') {
@@ -730,7 +730,22 @@ async function generateScreenshot(msgs) {
             } else if (radiusVar === '0px') {
                 avatarRadius = '4px';
             }
-        } catch (e) {}
+        } catch (e) {}*/
+               // 【修复位置】定义头像圆角：直接根据设置里的形状来判断
+      let avatarRadius = '50%'; // 默认圆形
+      const currentShape = settings.myAvatarShape || settings.partnerAvatarShape || 'circle';
+      if (currentShape === 'square') {
+        // 如果是方形，尝试读取滑块设置的圆角，没设置就用默认8px
+        try {
+          const radiusVar = computedStyle.getPropertyValue('--avatar-corner-radius').trim();
+          avatarRadius = (radiusVar && radiusVar !== '') ? radiusVar : '8px';
+        } catch(e) {
+          avatarRadius = '8px';
+        }
+      } else {
+        avatarRadius = '50%'; // 圆形就直接给正圆
+      }
+
 
         // 背景设置
         let bgStyle = `background-color: ${primaryBg};`;
@@ -779,7 +794,7 @@ async function generateScreenshot(msgs) {
             const safeText = (msg.text || '').replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, '<br>');
 
             // 2. 处理表情包/图片 (支持 msg.image 或 msg.sticker 等字段)
-            let imageHtml = '';
+           /* let imageHtml = '';
             // 兼容各种可能存储图片的字段名
             const imgUrl = msg.image || msg.sticker || msg.img || msg.fileUrl || '';
 
@@ -794,7 +809,26 @@ async function generateScreenshot(msgs) {
                     : 'max-width:180px; max-height:180px; border-radius:8px; display:block; margin-top:6px;';
                 
                 imageHtml = `<img src="${safeUrl}" style="${imgStyle}" onerror="this.style.display='none'">`;
-            }
+            }*/
+            let imageHtml = '';
+			// 兼容各种可能存储图片的字段名
+			const imgUrl = msg.image || msg.sticker || msg.img || msg.fileUrl || '';
+			if (imgUrl) {
+				// 【新增防卡顿核心】判断是不是本地图片或者同源图片
+				const isSafeImg = imgUrl.startsWith('data:') || imgUrl.startsWith(window.location.origin);
+				if (isSafeImg) {
+					// 安全图片：正常显示
+					const safeUrl = imgUrl.replace(/"/g, '&quot;');
+					const isOnlyImage = !safeText;
+					//const imgStyle = isOnlyImage ? 'max-width:100%; border-radius:12px; display:block;' : 'max-width:180px; max-height:180px; border-radius:8px; display:block; margin-top:6px;';
+					const imgStyle = 'max-width:150px; max-height:150px; border-radius:12px; display:block; object-fit:contain;';
+                    imageHtml = `<img src="${safeUrl}" style="${imgStyle}" onerror="this.style.display='none'">`;
+				} else {
+					// 外部图床图片：用文字代替，防止 html2canvas 强行加载导致卡死
+					imageHtml = `<div style="font-size:12px;color:#999;padding:5px 0;">[图片]</div>`;
+				}
+			}
+
 
             // 生成时间戳（根据设置中的格式）
            // 生成时间戳（连续同发送者只在最后一条显示）
@@ -840,6 +874,17 @@ async function generateScreenshot(msgs) {
             if (bubbleStyle === 'rounded') bubbleStyleCSS = 'border-radius: 20px;';
             else if (bubbleStyle === 'rounded-large') bubbleStyleCSS = 'border-radius: 24px;';
             else if (bubbleStyle === 'square') bubbleStyleCSS = 'border-radius: 8px;';
+            // 【新增】判断是否为纯表情包（无文字且无引用回复），如果是，背景透明
+            const isOnlyImageMsg = !safeText && !replyContent;
+            let bubbleInnerStyle = '';
+            if (isOnlyImageMsg) {
+                // 纯表情包模式：背景透明、无内边距、无阴影（和CSS里的 .message-image-bubble-none 一致）
+                bubbleInnerStyle = 'display:inline-block; padding:0; border-radius:12px; background:transparent; max-width:100%; text-align:left;';
+            } else {
+                // 正常模式：带气泡背景
+                bubbleInnerStyle = `display:inline-block; padding:10px 15px; border-radius:18px; background:${isUser ? accentColor : secondaryBg}; max-width:100%; color:${isUser ? '#fff' : textPrimary}; text-align:left; font-size:15px; word-break:break-word; ${bubbleStyleCSS} box-shadow: 0 3px 6px rgba(0,0,0,0.1);`;
+            }
+
             // 头像 HTML
             // 头像 HTML（✨ 修复跨域卡死：过滤外部图床链接）
             const avatarSize = 35;
@@ -859,7 +904,7 @@ async function generateScreenshot(msgs) {
             }
 
              // 拼接消息块
-            if (showAvatar) {
+           /* if (showAvatar) {
                 chatParts.push(`
                 <div style="margin:16px 0; display:flex; align-items:flex-start; gap:12px; flex-direction:${isUser ? 'row-reverse' : 'row'};">
                     ${avatarHTML}
@@ -885,7 +930,35 @@ async function generateScreenshot(msgs) {
                         ${timeStrHTML}
                     </div>
                 `);
+            }*/
+           		// 拼接消息块
+            if (showAvatar) {
+                chatParts.push(`
+                <div style="margin:16px 0; display:flex; align-items:flex-start; gap:12px; flex-direction:${isUser ? 'row-reverse' : 'row'};">
+                    ${avatarHTML}
+                    <div style="display:flex; flex-direction:column; max-width:calc(80% - ${avatarSize + 12}px); align-items:${isUser ? 'flex-end' : 'flex-start'};">
+                    <div style="${bubbleInnerStyle}">
+                        ${replyContent}
+                        ${safeText}
+                        ${imageHtml}
+                    </div>
+                    ${timeStrHTML}
+                    </div>
+                </div>
+                `);
+            } else {
+                chatParts.push(`
+                <div style="margin:16px 0; display:flex; flex-direction:column; align-items:${isUser ? 'flex-end' : 'flex-start'};">
+                    <div style="${bubbleInnerStyle}">
+                        ${replyContent}
+                        ${safeText}
+                        ${imageHtml}
+                    </div>
+                    ${timeStrHTML}
+                </div>
+                `);
             }
+
         });
 
         // 尾部
@@ -952,12 +1025,12 @@ async function generateScreenshot(msgs) {
                 }
 
                 // 3. 复制主文档的外部样式表
-                document.head.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+                /*document.head.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
                     const newLink = clonedDoc.createElement('link');
                     newLink.rel = 'stylesheet';
                     newLink.href = link.href;
                     clonedDoc.head.appendChild(newLink);
-                });
+                });*/
             }
 
         });

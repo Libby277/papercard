@@ -81,9 +81,9 @@ function _renderListContentOnly() {
         } else if (currentSubTab === 'period') {
         renderType = 'period';  // 🆕 新增
         }
-    } else if (currentMajorTab === 'atmosphere') {
-        if (currentSubTab === 'pokes') itemsToRender = customPokes;
-        else if (currentSubTab === 'statuses') itemsToRender = customStatuses;
+        else if (currentSubTab === 'pokes') itemsToRender = customPokes;
+    } else if (currentMajorTab === 'atmosphere') { 
+        if (currentSubTab === 'statuses') itemsToRender = customStatuses;
         else if (currentSubTab === 'mottos') itemsToRender = customMottos;
         else if (currentSubTab === 'intros') itemsToRender = customIntros;
     }
@@ -162,9 +162,9 @@ function renderReplyLibrary() {
         } else if (currentSubTab === 'period') {
             renderType = 'period'; 
         }
+        else if (currentSubTab === 'pokes') itemsToRender = customPokes;
     } else if (currentMajorTab === 'atmosphere') {
-        if (currentSubTab === 'pokes') itemsToRender = customPokes;
-        else if (currentSubTab === 'statuses') itemsToRender = customStatuses;
+        if (currentSubTab === 'statuses') itemsToRender = customStatuses;
         else if (currentSubTab === 'mottos') itemsToRender = customMottos;
         else if (currentSubTab === 'intros') itemsToRender = customIntros;
     }

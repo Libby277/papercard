@@ -18,7 +18,7 @@ function setupEventListeners() {
         initThemeEditor(); 
         initThemeSchemes();
         initPeriodListeners(); 
-        initComboMenu(); 
+       // initComboMenu(); 
         initCalendar(); 
         initHomeShortcuts();
     } catch (e) {
@@ -304,17 +304,53 @@ function initModalListeners() {
     DOMElements.editModal.input.addEventListener('input', () => {
         DOMElements.editModal.save.disabled = !DOMElements.editModal.input.value.trim();
     });
-    DOMElements.pokeModal.save.addEventListener('click', () => {
-        let pokeText = DOMElements.pokeModal.input.value.trim() || `${settings.myName} 拍了拍 ${settings.partnerName}`;
-        addMessage({
-            id: Date.now(), text: _formatPokeText(pokeText), timestamp: new Date(), type: 'system'
-        });
-        hideModal(DOMElements.pokeModal.modal);
-        DOMElements.pokeModal.input.value = '';
-        const delayRange = settings.replyDelayMax - settings.replyDelayMin;
-        const randomDelay = settings.replyDelayMin + Math.random() * delayRange;
-        setTimeout(simulateReply, randomDelay);
-    });
+
+    /*DOMElements.pokeModal.save.addEventListener('click', () => {
+        let pokeText = DOMElements.pokeModal.input.value.trim();
+        
+        // 判断是不是从你自己的快捷面板点进来的
+        if (window._pokeModalTarget === 'myPanel') {
+            window._pokeModalTarget = null; // 用完销毁标记
+            
+            if (!pokeText) {
+                showNotification('动作内容不能为空', 'error');
+                return;
+            }
+            if (!settings.myPokeList) settings.myPokeList = [];
+            if (settings.myPokeList.includes(pokeText)) {
+                showNotification('这个动作已经存在了', 'warning');
+                return;
+            }
+            
+            // 存到你自己的独立列表里，不发送消息
+            settings.myPokeList.push(pokeText);
+            hideModal(DOMElements.pokeModal.modal);
+            DOMElements.pokeModal.input.value = '';
+            if (typeof throttledSaveData === 'function') throttledSaveData();
+            showNotification('动作已添加到列表', 'success');
+            
+            // 自动刷新一下拍一拍面板
+            const panel = document.getElementById('user-sticker-picker');
+            if (panel && panel.classList.contains('active')) {
+                const activeTab = panel.querySelector('.combo-tab-btn.active');
+                if (activeTab) activeTab.click(); 
+            }
+        } else {
+            // 走这里说明是从“回复库”或者其他地方进来的，保持原来的逻辑（直接发送）
+            pokeText = pokeText || `${settings.myName} 拍了拍 ${settings.partnerName}`;
+            addMessage({
+                id: Date.now(),
+                text: typeof _formatPokeText === 'function' ? _formatPokeText(pokeText) : pokeText,
+                timestamp: new Date(),
+                type: 'system'
+            });
+            hideModal(DOMElements.pokeModal.modal);
+            DOMElements.pokeModal.input.value = '';
+            const delayRange = settings.replyDelayMax - settings.replyDelayMin;
+            const randomDelay = settings.replyDelayMin + Math.random() * delayRange;
+            setTimeout(simulateReply, randomDelay);
+        }
+    });*/
 
 
     DOMElements.cancelCoinResult.addEventListener('click', () => {
@@ -346,7 +382,105 @@ function initModalListeners() {
 
 
         function initHeaderAndSettingsListeners() {
+            // ========== 本地字体多文件管理 ==========
+            async function renderLocalFontList() {
+                let container = document.getElementById('local-font-list');
+                if (!container) {
+                    const btn = document.getElementById('local-font-upload-btn');
+                    if (!btn) return;
+                    container = document.createElement('div');
+                    container.id = 'local-font-list';
+                    container.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-top:10px;';
+                    btn.parentNode.insertBefore(container, btn.nextSibling);
+                }
 
+                let fontList = await localforage.getItem(`${APP_PREFIX}local_font_list`) || [];
+                
+                // 🌟 加上这一段：过滤掉没有 blob 的僵尸记录
+                const validList = fontList.filter(f => f && f.buffer && f.buffer.byteLength > 0);
+                
+                // 🌟 如果过滤后变空了，说明数据全坏了，自动修复状态！
+                if (validList.length === 0 && fontList.length > 0) {
+                    console.warn('[字体] 检测到僵尸记录，自动清理');
+                    await localforage.removeItem(`${APP_PREFIX}local_font_list`);
+                    settings.useLocalFont = false;
+                    settings.activeLocalFontId = null;
+                    throttledSaveData();
+                    
+                    // 把上传按钮还回去
+                    const localFontBtn = document.getElementById('local-font-upload-btn');
+                    if (localFontBtn) localFontBtn.style.display = '';
+                    const localFontNameEl = document.getElementById('local-font-name');
+                    if (localFontNameEl) {
+                        localFontNameEl.textContent = '支持 .ttf / .woff / .woff2 / .otf 格式';
+                        localFontNameEl.style.cssText = 'padding:10px 14px;';
+                    }
+                    container.innerHTML = '';
+                    return;
+                }
+
+                if (validList.length === 0) {
+                    container.innerHTML = '';
+                    return;
+                }
+                const activeId = settings.activeLocalFontId;
+                container.innerHTML = validList.map(f => {
+                    const on = f.id === activeId;
+                    return `<div class="lf-item" data-id="${f.id}" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;cursor:pointer;border:1.5px solid ${on ? 'var(--accent-color)' : 'var(--border-color)'};background:${on ? 'rgba(var(--accent-color-rgb),0.06)' : 'var(--primary-bg)'};transition:all 0.15s;">
+                        <i class="fas fa-file-alt" style="color:${on ? 'var(--accent-color)' : 'var(--text-secondary)'};font-size:14px;flex-shrink:0;"></i>
+                        <span style="flex:1;font-size:12px;color:${on ? 'var(--accent-color)' : 'var(--text-primary)'};font-weight:${on ? '600' : '400'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span>
+                        ${on ? '<span style="font-size:10px;color:var(--accent-color);opacity:.7;">使用中</span>' : ''}
+                        <button class="lf-del" data-id="${f.id}" style="width:22px;height:22px;border-radius:6px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;opacity:0;transition:opacity .15s;flex-shrink:0;"><i class="fas fa-times"></i></button>
+                    </div>`;
+                }).join('');
+                container.querySelectorAll('.lf-item').forEach(el => {
+                    el.onmouseenter = () => el.querySelector('.lf-del').style.opacity = '1';
+                    el.onmouseleave = () => el.querySelector('.lf-del').style.opacity = '0';
+                    el.onclick = (e) => { if (!e.target.closest('.lf-del')) switchLocalFont(el.dataset.id); };
+                    el.querySelector('.lf-del').onclick = (e) => { e.stopPropagation(); deleteLocalFont(el.dataset.id); };
+                });
+            }
+            // 覆盖全局的 getActiveFontSource，兼容新旧两种存储格式
+            window.getActiveFontSource = async function() {
+                if (!settings.useLocalFont || !settings.activeLocalFontId) return settings.customFontUrl || '';
+                const fontList = await localforage.getItem(`${APP_PREFIX}local_font_list`) || [];
+                const target = fontList.find(f => f.id === settings.activeLocalFontId);
+                if (!target) return '';
+                if (target.buffer && target.buffer.byteLength > 0) {
+                    return URL.createObjectURL(new Blob([target.buffer], { type: target.type || 'font/ttf' }));
+                }
+                return '';
+            };
+
+            async function switchLocalFont(fontId) {
+                settings.useLocalFont = true;
+                settings.activeLocalFontId = fontId;
+                settings.customFontUrl = '';
+                const src = await getActiveFontSource();
+                if (src) await applyCustomFont(src);
+                if (fontUrlInput) fontUrlInput.value = '';
+                throttledSaveData(); renderLocalFontList(); renderMessages(true);
+                showNotification('已切换字体', 'success');
+            }
+            async function deleteLocalFont(fontId) {
+                let list = await localforage.getItem(`${APP_PREFIX}local_font_list`) || [];
+                list = list.filter(f => f.id !== fontId);
+                await localforage.setItem(`${APP_PREFIX}local_font_list`, list);
+                if (settings.activeLocalFontId === fontId) {
+                    if (list.length > 0) {
+                        settings.activeLocalFontId = list[0].id;
+                        const src = await getActiveFontSource();
+                        if (src) await applyCustomFont(src);
+                    } else {
+                        settings.activeLocalFontId = null;
+                        settings.useLocalFont = false;
+                        await applyCustomFont('');
+                    }
+                    renderMessages(true);
+                }
+                throttledSaveData(); renderLocalFontList();
+                showNotification('已删除字体', 'success');
+            }
             const openNameModal = (isPartner) => {
                 const modal = DOMElements.editModal;
                 showModal(modal.modal, modal.input);
@@ -719,55 +853,98 @@ document.getElementById('chat-settings').addEventListener('click', () => {
                     });
             });
 
+            
             const fontUrlInput = document.getElementById('custom-font-url');
             const applyFontBtn = document.getElementById('apply-font-btn');
-            
             if (fontUrlInput) fontUrlInput.value = settings.customFontUrl || "";
 
+            // 🌟 新增：本地字体文件上传逻辑
+            const localFontInput = document.getElementById('local-font-file-input'); 
+            const localFontBtn = document.getElementById('local-font-upload-btn'); 
+            
+            if (localFontBtn && localFontInput) {
+                localFontBtn.addEventListener('click', () => localFontInput.click());
+                localFontInput.addEventListener('change', async (e) => {
+                    const files = Array.from(e.target.files);
+                    if (!files.length) return;
+                    localFontInput.setAttribute('multiple', ''); // 确保支持多选
+                    const valid = files.filter(f => f.size <= 20 * 1024 * 1024);
+                    if (files.length > valid.length) showNotification(`${files.length - valid.length} 个文件超过 20MB，已跳过`, 'error');
+                    if (!valid.length) return;
+                    showNotification(`正在读取 ${valid.length} 个字体...`, 'info', 2000);
+                    let fontList = await localforage.getItem(`${APP_PREFIX}local_font_list`) || [];
+                    // 兼容旧版：把旧的单文件迁移进列表
+                    const oldBlob = await localforage.getItem(`${APP_PREFIX}local_font_blob`);
+                    if (oldBlob && fontList.length === 0) {
+                        fontList.push({ id: 'font_legacy', name: '旧版迁移字体', blob: oldBlob });
+                        await localforage.removeItem(`${APP_PREFIX}local_font_blob`);
+                    }
+                    await localforage.removeItem(`${APP_PREFIX}local_font_base64`).catch(()=>{});
+                    let added = 0;
+                    for (const file of valid) {
+                       // const blob = new Blob([await file.arrayBuffer()], { type: file.type || 'font/ttf' });
+                       // fontList.push({ id: 'font_' + Date.now() + '_' + Math.random().toString(36).substr(2,5), name: file.name, blob });
+                        const buffer = await file.arrayBuffer();
+                        fontList.push({ id: 'font_' + Date.now() + '_' + Math.random().toString(36).substr(2,5), name: file.name, buffer: buffer, type: file.type || 'font/ttf' });
+                        added++;
+                    }
+                    await localforage.setItem(`${APP_PREFIX}local_font_list`, fontList);
+                    settings.useLocalFont = true;
+                    if (!settings.activeLocalFontId || !fontList.find(f => f.id === settings.activeLocalFontId)) {
+                        settings.activeLocalFontId = fontList[fontList.length - added].id;
+                    }
+                    const src = await getActiveFontSource();
+                    if (src) await applyCustomFont(src);
+                    if (fontUrlInput) fontUrlInput.value = '';
+                    throttledSaveData(); renderLocalFontList(); renderMessages(true);
+                    showNotification(`已添加 ${added} 个字体`, 'success');
+                    e.target.value = '';
+                });
+            }
+
+            // 🌟 修改：外部链接应用逻辑
             if (applyFontBtn) {
                 applyFontBtn.addEventListener('click', () => {
                     const url = fontUrlInput.value.trim();
                     settings.customFontUrl = url;
+                    // 关键：如果用户填了外部链接，要清掉本地字体的标记和文件
+                    settings.useLocalFont = false;
+                    localforage.removeItem(`${APP_PREFIX}local_font_base64`).catch(()=>{});
+                    localforage.removeItem(`${APP_PREFIX}local_font_blob`).catch(()=>{});
                     
                     showNotification('正在尝试加载字体...', 'info', 1000);
                     applyCustomFont(url).then(() => {
                         throttledSaveData();
-                        if(url) showNotification('字体已应用', 'success');
+                        if(url) showNotification('外部字体已应用', 'success');
                         else showNotification('已恢复默认字体', 'success');
+                    }).catch(err => {
+                        console.error('字体加载失败:', err);
+                        showNotification('字体加载失败，请检查链接或网络', 'error');
                     });
                 });
             }
 
-            
             const followSystemBtn = document.getElementById('follow-system-font-btn');
             if (followSystemBtn) {
                 followSystemBtn.addEventListener('click', () => {
-                    
-                    const systemFontStack = 'system-ui, -apple-system, sans-serif';
-                    
-                    
-                    if (fontUrlInput) fontUrlInput.value = "";
-                    
-                    
-                    settings.customFontUrl = "";
-                    
-                    
-                    settings.messageFontFamily = systemFontStack;
-                    
-                    
-                    document.documentElement.style.setProperty('--font-family', systemFontStack);
-                    document.documentElement.style.setProperty('--message-font-family', systemFontStack);
-                    
-                    
-                    throttledSaveData();
-                    
-                    
-                    renderMessages(true);
-                    
-                    showNotification('已应用跟随系统字体', 'success');
+                const systemFontStack = 'system-ui, -apple-system, sans-serif';
+                if (fontUrlInput) fontUrlInput.value = "";
+                settings.customFontUrl = "";
+                // 🌟 加上这两句清理本地字体
+                settings.useLocalFont = false; 
+                localforage.removeItem(`${APP_PREFIX}local_font_base64`).catch(()=>{});
+                localforage.removeItem(`${APP_PREFIX}local_font_blob`).catch(()=>{}); 
+                
+                settings.messageFontFamily = systemFontStack;
+                document.documentElement.style.setProperty('--font-family', systemFontStack);
+                document.documentElement.style.setProperty('--message-font-family', systemFontStack);
+                document.body.style.fontFamily = systemFontStack;
+                throttledSaveData();
+                renderMessages(true);
+                showNotification('已应用跟随系统字体', 'success');
                 });
             }
-            
+
             const cssTextarea = document.getElementById('custom-bubble-css');
             const applyCssBtn = document.getElementById('apply-css-btn');
             const resetCssBtn = document.getElementById('reset-css-btn');
@@ -1309,10 +1486,36 @@ document.getElementById('chat-settings').addEventListener('click', () => {
                 });
             });
 
+           const clearLocalFontBtn = document.getElementById('clear-local-font-btn');
+            if (clearLocalFontBtn) {
+                clearLocalFontBtn.addEventListener('click', () => {
+                    if (!confirm('确定清除所有已上传的本地字体？')) return;
+                    settings.useLocalFont = false;
+                    settings.activeLocalFontId = null;
+                    settings.customFontUrl = ''; 
+                    localforage.removeItem(`${APP_PREFIX}local_font_list`).catch(()=>{});
+                    localforage.removeItem(`${APP_PREFIX}local_font_base64`).catch(()=>{});
+                    localforage.removeItem(`${APP_PREFIX}local_font_blob`).catch(()=>{});
+                    //const localFontNameEl = document.getElementById('local-font-name');
+                    //if (localFontNameEl) { localFontNameEl.textContent = '支持 .ttf / .woff / .woff2 / .otf 格式'; localFontNameEl.style.cssText = 'padding:10px 14px;'; }
+                    const localFontBtn = document.getElementById('local-font-upload-btn');
+                    if (localFontBtn) localFontBtn.style.display = '';
+                    const listEl = document.getElementById('local-font-list');
+                    if (listEl) listEl.innerHTML = '';
+                    applyCustomFont('').then(() => {
+                        document.documentElement.style.setProperty('--font-family', settings.messageFontFamily || "'Noto Serif SC', serif");
+                        document.documentElement.style.setProperty('--message-font-family', settings.messageFontFamily || "'Noto Serif SC', serif");
+                        document.body.style.fontFamily = "'Noto Serif SC', serif";
+                        throttledSaveData(); renderMessages(true);
+                        showNotification('已清除所有本地字体', 'success');
+                    });
+                });
+            }
+
 
             document.getElementById('appearance-settings').addEventListener('click', () => {
                 hideModal(DOMElements.settingsModal.modal);
-                window.hideAppearancePanel && window.hideAppearancePanel();
+                
                 renderBackgroundGallery();
                 renderThemeSchemesList();
                 
@@ -1336,16 +1539,20 @@ document.getElementById('chat-settings').addEventListener('click', () => {
                 document.querySelectorAll('.theme-color-btn').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.theme === settings.colorTheme);
                 });
-                
-                showModal(DOMElements.appearanceModal.modal);
+                         
+              // 同步本地字体状态
+                const localFontNameEl = document.getElementById('local-font-name');
+                const localFontBtn = document.getElementById('local-font-upload-btn');
+                if (localFontNameEl) localFontNameEl.style.display = 'none';
+                if (localFontBtn) localFontBtn.style.display = '';
+                renderLocalFontList();
+                showModal(document.getElementById('appearance-modal'));
                 setTimeout(() => { 
                     updateAvatarSettingsUI && updateAvatarSettingsUI(); 
                     setupAppearancePanelFrameSettings && setupAppearancePanelFrameSettings();
                 }, 100);
             });
-            DOMElements.appearanceModal.closeBtn.addEventListener('click', () => {
-                    hideModal(DOMElements.appearanceModal.modal);
-                });
+
 
             const bgInput = document.getElementById('bg-gallery-input');
             if (bgInput) {

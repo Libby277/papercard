@@ -4,225 +4,33 @@
  * NOTE: This must be loaded after the DOM is ready (or wrapped in DOMContentLoaded)
  */
 // ============================================================
-// 📦 应用数据注册表 (完整版)
-// 包含：核心、氛围、功能、新特性等所有数据
+// 📦 应用数据扩展注册表 (仅存放 state.js 独有的扩展数据)
+// 核心数据请看 config.js，不要在这里重复定义！
 // ============================================================
 window.APP_DATA_REGISTRY = [
-    // --- 1. 核心数据 ---
-    { 
-        id: 'messages', 
-        name: '聊天记录', 
-        icon: 'fa-comments', 
-        core: true, 
-        backup: true,
-        getValue: () => typeof messages !== 'undefined' ? messages : [],
-        setValue: (v) => { if(typeof messages !== 'undefined') messages = v; },
-        onImport: (d) => { if(typeof messages !== 'undefined') messages = d.map(m => ({...m, timestamp: new Date(m.timestamp)})); }
-    },
-    { 
-        id: 'settings', 
-        name: '外观与设置', 
-        icon: 'fa-sliders-h', 
-        core: true, 
-        backup: true,
-        getValue: () => typeof settings !== 'undefined' ? settings : {},
-        setValue: (v) => { if(typeof settings !== 'undefined') settings = v; },
-        onImport: (d) => { if(typeof settings !== 'undefined') Object.assign(settings, d); }
-    },
-
-    // --- 2. 回复与表情 ---
-    /*{ 
-        id: 'customReplies', 
-        name: '字卡回复库', 
-        icon: 'fa-reply', 
-        backup: true,
-        getValue: () => typeof customReplies !== 'undefined' ? customReplies : [],
-        setValue: (v) => { if(typeof customReplies !== 'undefined') customReplies = v; }
-    },
-    { 
-        id: 'customEmojis', 
-        name: '自定义 Emoji', 
-        icon: 'fa-smile', 
-        backup: true,
-        getValue: () => typeof customEmojis !== 'undefined' ? customEmojis : [],
-        setValue: (v) => { if(typeof customEmojis !== 'undefined') customEmojis = v; }
-    },
-    { 
-        id: 'stickerLibrary', 
-        name: '表情包库', 
-        icon: 'fa-sticky-note', 
-        backup: true,
-        getValue: () => typeof stickerLibrary !== 'undefined' ? stickerLibrary : [],
-        setValue: (v) => { if(typeof stickerLibrary !== 'undefined') stickerLibrary = v; }
-    },
-    { 
-        id: 'myStickerLibrary', 
-        name: '我的收藏表情', 
-        icon: 'fa-folder-open', 
-        backup: true,
-        getValue: () => typeof myStickerLibrary !== 'undefined' ? myStickerLibrary : [],
-        setValue: (v) => { if(typeof myStickerLibrary !== 'undefined') myStickerLibrary = v; }
-    },
-
-    // --- 3. 氛围感配置 (分组) ---
-    { 
-        id: 'customPokes', 
-        name: '拍一拍', 
-        icon: 'fa-hand-point-up', 
-        backup: true, 
-        group: 'atmosphere',
-        getValue: () => typeof customPokes !== 'undefined' ? customPokes : [],
-        setValue: (v) => { if(typeof customPokes !== 'undefined') customPokes = v; }
-    },
-    { 
-        id: 'customStatuses', 
-        name: '对方状态', 
-        icon: 'fa-user-circle', 
-        backup: true, 
-        group: 'atmosphere',
-        getValue: () => typeof customStatuses !== 'undefined' ? customStatuses : [],
-        setValue: (v) => { if(typeof customStatuses !== 'undefined') customStatuses = v; }
-    },
-    { 
-        id: 'customMottos', 
-        name: '顶部格言', 
-        icon: 'fa-quote-right', 
-        backup: true, 
-        group: 'atmosphere',
-        getValue: () => typeof customMottos !== 'undefined' ? customMottos : [],
-        setValue: (v) => { if(typeof customMottos !== 'undefined') customMottos = v; }
-    },
-    { 
-        id: 'customIntros', 
-        name: '开场动画', 
-        icon: 'fa-film', 
-        backup: true, 
-        group: 'atmosphere',
-        getValue: () => typeof customIntros !== 'undefined' ? customIntros : [],
-        setValue: (v) => { if(typeof customIntros !== 'undefined') customIntros = v; }
-    },
-    // 虚拟组：氛围感
-    { 
-        id: 'atmosphere', 
-        name: '氛围感配置', 
-        icon: 'fa-magic', 
-        isVirtual: true, 
-        children: ['customPokes', 'customStatuses', 'customMottos', 'customIntros'] 
-    },*/
-
-    // --- 4. 功能数据 ---
-    { 
-        id: 'anniversaries', 
-        name: '重要日', 
-        icon: 'fa-heart', 
-        backup: true,
-        getValue: () => typeof anniversaries !== 'undefined' ? anniversaries : [],
-        setValue: (v) => { if(typeof anniversaries !== 'undefined') anniversaries = v; }
-    },
-    { 
-        id: 'calendarEvents', 
-        name: '心情与日历', 
-        icon: 'fa-calendar-alt', 
-        backup: true,
-        getValue: () => typeof calendarEvents !== 'undefined' ? calendarEvents : [],
-        setValue: (v) => { if(typeof calendarEvents !== 'undefined') calendarEvents = v; }
-    },
-   /* { 
-        id: 'partnerPersonas', 
-        name: '群聊成员', 
-        icon: 'fa-users', 
-        backup: true,
-        getValue: () => typeof partnerPersonas !== 'undefined' ? partnerPersonas : [],
-        setValue: (v) => { if(typeof partnerPersonas !== 'undefined') partnerPersonas = v; }
-    },*/
+    // --- 1. 核心数据 (由 config.js 提供，这里只做 Getter/Setter 桥接) ---
+    { id: 'messages', name: '聊天记录', icon: 'fa-comments', core: true, backup: true, getValue: () => typeof messages !== 'undefined' ? messages : [], setValue: (v) => { if(typeof messages !== 'undefined') messages = v; }, onImport: (d) => { if(typeof messages !== 'undefined') messages = d.map(m => ({...m, timestamp: new Date(m.timestamp)})); } },
+    { id: 'settings', name: '外观与设置', icon: 'fa-sliders-h', core: true, backup: true, getValue: () => typeof settings !== 'undefined' ? settings : {}, setValue: (v) => { if(typeof settings !== 'undefined') settings = v; }, onImport: (d) => { if(typeof settings !== 'undefined') Object.assign(settings, d); } },
     
-    // --- 5. 月经系统 (包含关怀消息和周期记录) ---
-    { 
-        id: 'periodCareMessages', 
-        name: '月经关怀文案', 
-        icon: 'fa-heart', 
-        backup: true,
-        getValue: () => typeof periodCareMessages !== 'undefined' ? periodCareMessages : {},
-        setValue: (v) => { if(typeof periodCareMessages !== 'undefined') periodCareMessages = v; }
-    },
-    { 
-        id: 'periodRecords', 
-        name: '月经周期记录', 
-        icon: 'fa-calendar-check', 
-        backup: true,
-        getValue: () => typeof periodRecords !== 'undefined' ? periodRecords : [],
-        setValue: (v) => { if(typeof periodRecords !== 'undefined') periodRecords = v; }
-    },
-    { 
-        id: 'periodSettings', 
-        name: '月经设置', 
-        icon: 'fa-cog', 
-        backup: true,
-        getValue: () => typeof periodSettings !== 'undefined' ? periodSettings : {},
-        setValue: (v) => { if(typeof periodSettings !== 'undefined') periodSettings = v; }
-    },
+    // --- 2. 功能数据 ---
+    { id: 'anniversaries', name: '重要日', icon: 'fa-heart', backup: true, getValue: () => typeof anniversaries !== 'undefined' ? anniversaries : [], setValue: (v) => { if(typeof anniversaries !== 'undefined') anniversaries = v; } },
+    { id: 'calendarEvents', name: '心情与日历', icon: 'fa-calendar-alt', backup: true, getValue: () => typeof calendarEvents !== 'undefined' ? calendarEvents : [], setValue: (v) => { if(typeof calendarEvents !== 'undefined') calendarEvents = v; } },
+    
+    // --- 3. 月经系统 ---
+    { id: 'periodCareMessages', name: '月经关怀文案', icon: 'fa-heart', backup: true, getValue: () => typeof periodCareMessages !== 'undefined' ? periodCareMessages : {}, setValue: (v) => { if(typeof periodCareMessages !== 'undefined') periodCareMessages = v; } },
+    { id: 'periodRecords', name: '月经周期记录', icon: 'fa-calendar-check', backup: true, getValue: () => typeof periodRecords !== 'undefined' ? periodRecords : [], setValue: (v) => { if(typeof periodRecords !== 'undefined') periodRecords = v; } },
+    { id: 'periodSettings', name: '月经设置', icon: 'fa-cog', backup: true, getValue: () => typeof periodSettings !== 'undefined' ? periodSettings : {}, setValue: (v) => { if(typeof periodSettings !== 'undefined') periodSettings = v; } },
 
-    // --- 6. 新功能 (根据 HTML 补充) ---
-    // 注意：请确保你的 JS 代码中定义了这些变量，如果没有定义，它们会被忽略
-    { 
-        id: 'envelopeData', 
-        name: '留言板', 
-        icon: 'fa-solid fa-thumbtack', 
-        backup: true,
-        getValue: () => typeof window.boardDataV2 !== 'undefined' ? window.boardDataV2 : { myThreads: [], partnerThreads: [], boardReplyPool: [], settings: {} },
-        setValue: (v) => { if (typeof window.setBoardDataV2 === 'function') window.setBoardDataV2(v); }
-    },
-    { 
-        id: 'moodDiaryData', 
-        name: '心晴手账', 
-        icon: 'fa-cloud-sun', 
-        backup: true,
-        getValue: () => typeof moodDiaryData !== 'undefined' ? moodDiaryData : [],
-        setValue: (v) => { if(typeof moodDiaryData !== 'undefined') moodDiaryData = v; }
-    },
-    { 
-        id: 'divinationHistory', 
-        name: '占卜记录', 
-        icon: 'fa-moon', 
-        backup: true,
-        getValue: () => typeof divinationHistory !== 'undefined' ? divinationHistory : [],
-        setValue: (v) => { if(typeof divinationHistory !== 'undefined') divinationHistory = v; }
-    },
+    // --- 4. 新功能 ---
+    { id: 'envelopeData', name: '留言板', icon: 'fa-solid fa-thumbtack', backup: true, getValue: () => typeof window.boardDataV2 !== 'undefined' ? window.boardDataV2 : {}, setValue: (v) => { if (typeof window.setBoardDataV2 === 'function') window.setBoardDataV2(v); } },
+    { id: 'moodDiaryData', name: '心晴手账', icon: 'fa-cloud-sun', backup: true, getValue: () => typeof moodDiaryData !== 'undefined' ? moodDiaryData : [], setValue: (v) => { if(typeof moodDiaryData !== 'undefined') moodDiaryData = v; } },
+    { id: 'divinationHistory', name: '占卜记录', icon: 'fa-moon', backup: true, getValue: () => typeof divinationHistory !== 'undefined' ? divinationHistory : [], setValue: (v) => { if(typeof divinationHistory !== 'undefined') divinationHistory = v; } },
 
-    // --- 7. 外观主题 ---
-    { 
-        id: 'savedBackgrounds', 
-        name: '背景图集', 
-        icon: 'fa-image', 
-        backup: true,
-        getValue: () => typeof savedBackgrounds !== 'undefined' ? savedBackgrounds : [],
-        setValue: (v) => { if(typeof savedBackgrounds !== 'undefined') savedBackgrounds = v; }
-    },
-    { 
-        id: 'customThemes', 
-        name: '自定义主题', 
-        icon: 'fa-palette', 
-        backup: true,
-        getValue: () => typeof customThemes !== 'undefined' ? customThemes : [],
-        setValue: (v) => { if(typeof customThemes !== 'undefined') customThemes = v; }
-    },
-    { 
-        id: 'themeSchemes', 
-        name: '主题方案', 
-        icon: 'fa-swatchbook', 
-        backup: true,
-        getValue: () => typeof themeSchemes !== 'undefined' ? themeSchemes : [],
-        setValue: (v) => { if(typeof themeSchemes !== 'undefined') themeSchemes = v; }
-    },
-    { 
-        id: 'wishingPoolData',
-        name: '许愿池', 
-        icon: 'fa-star', 
-        backup: true, 
-        getValue: () => typeof wishingPoolData !== 'undefined' ? wishingPoolData : [], 
-        setValue: (v) => { if(typeof wishingPoolData !== 'undefined') wishingPoolData = v; } 
-    },
-
+    // --- 5. 外观主题 ---
+    { id: 'savedBackgrounds', name: '背景图集', icon: 'fa-image', backup: true, getValue: () => typeof savedBackgrounds !== 'undefined' ? savedBackgrounds : [], setValue: (v) => { if(typeof savedBackgrounds !== 'undefined') savedBackgrounds = v; } },
+    { id: 'customThemes', name: '自定义主题', icon: 'fa-palette', backup: true, getValue: () => typeof customThemes !== 'undefined' ? customThemes : [], setValue: (v) => { if(typeof customThemes !== 'undefined') customThemes = v; } },
+    { id: 'themeSchemes', name: '主题方案', icon: 'fa-swatchbook', backup: true, getValue: () => typeof themeSchemes !== 'undefined' ? themeSchemes : [], setValue: (v) => { if(typeof themeSchemes !== 'undefined') themeSchemes = v; } },
+    { id: 'wishingPoolData', name: '许愿池', icon: 'fa-star', backup: true, getValue: () => typeof wishingPoolData !== 'undefined' ? wishingPoolData : [], setValue: (v) => { if(typeof wishingPoolData !== 'undefined') wishingPoolData = v; } },
 ];
 
 // ============================================================
@@ -410,12 +218,12 @@ window._setRegVal = (id, val) => {
                 cancel: document.getElementById('cancel-note'),
                 save: document.getElementById('save-note')
             },
-            pokeModal: {
+            /*pokeModal: {
                 modal: document.getElementById('poke-modal'),
                 input: document.getElementById('poke-input'),
                 cancel: document.getElementById('cancel-poke'),
-                save: document.getElementById('send-poke')
-            },
+                save: document.getElementById('cancel-poke')?.nextElementSibling
+            },*/
             settingsModal: {
                 modal: document.getElementById('settings-modal'),
                 settingsBtn: document.getElementById('settings-btn'),

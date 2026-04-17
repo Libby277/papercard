@@ -280,7 +280,7 @@ function startCoinFlipAnimation() {
 }
 window.startCoinFlipAnimation = startCoinFlipAnimation;
 
-function initComboMenu() {
+/*function initComboMenu() {
     const comboBtn = document.getElementById('combo-btn');
     const picker = document.getElementById('user-sticker-picker');
     const contentArea = document.getElementById('combo-content-area');
@@ -469,4 +469,5 @@ function initComboMenu() {
 
         contentArea.appendChild(wrapper);
     }
-}
+}*/
+

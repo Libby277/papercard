@@ -182,33 +182,60 @@ function deduplicateContentArray(arr, baseSystemArray = []) {
             saveTimeout = setTimeout(saveData, 500);
         };
 
+
 async function applyCustomFont(url) {
+    // 1. 清理旧标签
+    let existingLink = document.getElementById('user-custom-font-link');
+    if (existingLink) existingLink.remove();
+    let existingStyle = document.getElementById('user-custom-font-style');
+    if (existingStyle) existingStyle.remove();
+    document.fonts.forEach(f => { if (f.family === 'UserCustomFont') document.fonts.delete(f); });
+
     if (!url || !url.trim()) {
         document.documentElement.style.removeProperty('--font-family');
         document.documentElement.style.removeProperty('--message-font-family');
+        document.body.style.fontFamily = '';
         return;
     }
-    
-    const fontName = 'UserCustomFont';
+
     try {
-        const font = new FontFace(fontName, `url(${url})`);
-        await font.load();
-        document.fonts.add(font);
-        
-        const fontStack = `"${fontName}", 'Noto Serif SC', serif`;
-        document.documentElement.style.setProperty('--font-family', fontStack);
-        document.documentElement.style.setProperty('--message-font-family', fontStack);
-        if (typeof settings !== 'undefined') {
-            settings.messageFontFamily = fontStack;
+        if (url.endsWith('.css')) {
+            // 处理 CSS 链接 (如 Google Fonts)
+            const link = document.createElement('link');
+            link.id = 'user-custom-font-link';
+            link.rel = 'stylesheet';
+            link.href = url;
+            document.head.appendChild(link);
+            
+            // 💥 关键修复：尝试从 URL 提取字体名，或者默认使用 CSS 里定义的第一个字体
+            // 例如: https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap
+            const match = url.match(/family=([^&:]+)/);
+            const fontName = match ? decodeURIComponent(match[1]).replace(/\+/g, ' ') : 'CustomUserFont';
+            
+            const fontStack = `"${fontName}", 'Noto Serif SC', serif`;
+            document.documentElement.style.setProperty('--font-family', fontStack);
+            document.documentElement.style.setProperty('--message-font-family', fontStack);
+            document.body.style.fontFamily = fontStack;
+            if (typeof settings !== 'undefined') settings.messageFontFamily = fontStack;
+        } else {
+            // 处理直链文件 (如 .ttf, .woff2)
+            const fontName = 'UserCustomFont';
+            const font = new FontFace(fontName, `url(${url})`);
+            await font.load();
+            document.fonts.add(font);
+            
+            const fontStack = `"${fontName}", 'Noto Serif SC', serif`;
+            document.documentElement.style.setProperty('--font-family', fontStack);
+            document.documentElement.style.setProperty('--message-font-family', fontStack);
+            document.body.style.fontFamily = fontStack;
+            if (typeof settings !== 'undefined') settings.messageFontFamily = fontStack;
         }
-        
         console.log('字体加载成功');
     } catch (e) {
         console.error('字体加载失败:', e);
-        showNotification('字体加载失败，请检查链接是否有效', 'error');
+        showNotification('字体加载失败，请检查链接是否有效或为网络问题', 'error');
     }
 }
-
 
 function applyCustomBubbleCss(cssCode) {
     const styleId = 'user-custom-bubble-style';
@@ -254,23 +281,7 @@ function applyGlobalThemeCss(cssCode) {
 
     styleTag.textContent = cssCode;
 }
-// 在 utils.js 中添加
-/*async function checkStorageSpace() {
-    if (navigator.storage && navigator.storage.estimate) {
-        const estimate = await navigator.storage.estimate();
-        const percentUsed = (estimate.usage / estimate.quota) * 100;
-        console.log(`存储使用: ${estimate.usage} / ${estimate.quota} (${percentUsed.toFixed(2)}%)`);
-        
-        if (percentUsed > 90) {
-            showNotification('存储空间不足，建议导出备份并清理数据', 'warning', 10000);
-        } else if (percentUsed > 80) {
-            showNotification('存储空间即将不足，请及时备份', 'warning', 5000);
-        }
-        
-        return estimate;
-    }
-    return null;
-}*/
+
 // 替换原来的 checkStorageSpace 函数
 async function checkStorageSpace() {
   if (!navigator.storage || !navigator.storage.estimate) return null;
@@ -304,6 +315,58 @@ async function checkStorageSpace() {
   }
   return estimate;
 }
+
+// 获取当前应该使用的字体源（优先本地文件，其次外部链接）
+/*async function getActiveFontSource() {
+  if (settings.useLocalFont) {
+    try {
+      // 🌟 优先读取极速版的二进制 Blob
+      const fontBlob = await localforage.getItem(`${APP_PREFIX}local_font_blob`);
+      if (fontBlob && fontBlob instanceof Blob) {
+        return URL.createObjectURL(fontBlob); // 瞬间生成链接
+      }
+      // 兼容旧用户：如果他们以前存过 Base64，也能正常读出来
+      const localBase64 = await localforage.getItem(`${APP_PREFIX}local_font_base64`);
+      return localBase64 || '';
+    } catch(e) {
+      return '';
+    }
+  }
+  return settings.customFontUrl || '';
+}*/
+async function getActiveFontSource() {
+    if (settings.useLocalFont) {
+        try {
+            const fontList = await localforage.getItem(`${APP_PREFIX}local_font_list`) || [];
+            // 优先按 activeLocalFontId 找
+            if (settings.activeLocalFontId) {
+                const activeFont = fontList.find(f => f.id === settings.activeLocalFontId);
+                if (activeFont && activeFont.blob) return URL.createObjectURL(activeFont.blob);
+            }
+            // 找不到就取第一个
+            if (fontList.length > 0 && fontList[0].blob) {
+                return URL.createObjectURL(fontList[0].blob);
+            }
+            // 兼容旧版单文件
+            const fontBlob = await localforage.getItem(`${APP_PREFIX}local_font_blob`);
+            if (fontBlob && fontBlob instanceof Blob) return URL.createObjectURL(fontBlob);
+            const localBase64 = await localforage.getItem(`${APP_PREFIX}local_font_base64`);
+            return localBase64 || '';
+        } catch(e) { return ''; }
+    }
+    return settings.customFontUrl || '';
+}
+
+// 统一的字体应用入口
+async function applyCurrentFont() {
+  const source = await getActiveFontSource();
+  if (source && source.trim()) {
+    await applyCustomFont(source);
+  } else {
+    await applyCustomFont('');
+  }
+}
+
 
 // 在应用启动时检查
 window.addEventListener('load', () => {

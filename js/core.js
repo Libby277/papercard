@@ -108,6 +108,7 @@ autoSendInterval: 5,
         emojiMixEnabled: true,
         boardPartnerWriteEnabled: false,
         keepKeyboardAlive: false,
+        activeLocalFontId: null,
             };
         }
 
@@ -298,11 +299,23 @@ const loadData = async () => {
             showPartnerNameInChat = settings.showPartnerNameInChat;
             document.body.classList.toggle('show-partner-name', showPartnerNameInChat);
         }
-        try {
+       /* try {
             if (settings.customFontUrl) applyCustomFont(settings.customFontUrl);
             if (settings.customBubbleCss) applyCustomBubbleCss(settings.customBubbleCss);
             if (settings.customGlobalCss) applyGlobalThemeCss(settings.customGlobalCss);
-        } catch(e) { console.warn("样式应用失败", e); }
+        } catch(e) { console.warn("样式应用失败", e); }*/
+        try {
+            if (settings.useLocalFont || (settings.customFontUrl && settings.customFontUrl.trim())) {
+                applyCurrentFont().catch(err => console.warn("字体加载失败", err));
+            } else if (settings.messageFontFamily) {
+                document.documentElement.style.setProperty('--font-family', settings.messageFontFamily);
+                document.documentElement.style.setProperty('--message-font-family', settings.messageFontFamily);
+            }
+            if (settings.customBubbleCss) applyCustomBubbleCss(settings.customBubbleCss);
+            if (settings.customGlobalCss) applyGlobalThemeCss(settings.customGlobalCss);
+            } catch(e) {
+            console.warn("样式应用失败", e);
+        }
         
         if (savedPokes) customPokes = savedPokes;
         else customPokes = [...CONSTANTS.POKE_ACTIONS];
@@ -352,7 +365,11 @@ const loadData = async () => {
         if (savedReplyGroups) window.customReplyGroups = savedReplyGroups;
         if (savedAnniversaries) anniversaries = savedAnniversaries;
         if (savedStickers) stickerLibrary = savedStickers;
-        if (savedMyStickers) myStickerLibrary = savedMyStickers;
+        //if (savedMyStickers) myStickerLibrary = savedMyStickers;
+        if (savedMyStickers) {
+            myStickerLibrary = savedMyStickers;
+            window.myStickerLibrary = savedMyStickers; // 👈 加上这一句，同步给 window
+        }
         if (savedCustomThemes) customThemes = savedCustomThemes;
         if (savedThemeSchemes) themeSchemes = savedThemeSchemes;
         try { const ce = await localforage.getItem(getStorageKey('customEmojis')); if (ce && Array.isArray(ce)) customEmojis = ce; } catch(e) {}
@@ -405,13 +422,13 @@ const LIBRARY_CONFIG = {
             { id: 'custom', name: '主字卡', mode: 'list' },
             { id: 'emojis', name: 'Emoji', mode: 'grid' },
             { id: 'stickers', name: '表情库', mode: 'grid' },
-            { id: 'period', name: '月经关怀', mode: 'list' } 
+            { id: 'period', name: '月经关怀', mode: 'list' },
+            { id: 'pokes', name: '拍一拍', mode: 'list' },
         ]
     },
     atmosphere: {
         title: "氛围感配置",
-        tabs: [
-            { id: 'pokes', name: '拍一拍', mode: 'list' },
+        tabs: [   
             { id: 'statuses', name: '对方状态', mode: 'list' },
             { id: 'mottos', name: '顶部格言', mode: 'list' },
             { id: 'intros', name: '开场动画', mode: 'list' }
@@ -1386,14 +1403,10 @@ function manageAutoSendTimer() {
         };
         function updateReplyPreview() { window.updateReplyPreview(); }
 
-        function sendMessage(textOverride = null, type = 'normal') {
+        /*function sendMessage(textOverride = null, type = 'normal', imageBase64 = null) {
             const text = textOverride || DOMElements.messageInput.value.trim();
             const imageFile = DOMElements.imageInput.files[0];
-            if (!text && !imageFile && type === 'normal') return;
-
-            //DOMElements.messageInput.value = '';
-            //DOMElements.messageInput.style.height = '46px';
-            //DOMElements.messageInput.blur();
+            if (!text && !imageFile && !imageBase64 && type === 'normal') return;
             // 🌟 键盘保活模式：静默清空，绝对不触发 blur
             // 🔥 核心改动：完全以标记为准，不再跟其他设置耦合
             if (DOMElements.messageInput.dataset.keepFocus === '1') {
@@ -1413,6 +1426,12 @@ function manageAutoSendTimer() {
             if (imageFile && imageFile.size > MAX_IMAGE_SIZE) {
                 showNotification('图片大小不能超过5MB', 'error'); DOMElements.imageInput.value = ''; return;
             }
+            if (imageBase64) {
+                createMessage(imageBase64);
+                DOMElements.imageInput.value = '';
+                return;
+            }
+
 
             const createMessage = (imgSrc = null) => {
                 const messageData = {
@@ -1523,7 +1542,145 @@ function manageAutoSendTimer() {
                 createMessage();
             }
             DOMElements.imageInput.value = '';
+        }*/
+        function sendMessage(textOverride = null, type = 'normal', imageBase64 = null) {
+            const text = textOverride || DOMElements.messageInput.value.trim();
+            const imageFile = DOMElements.imageInput.files[0];
+            if (!text && !imageFile && !imageBase64 && type === 'normal') return;
+
+            // 🌟 键盘保活模式：静默清空，绝对不触发 blur
+            // 🔥 核心改动：完全以标记为准，不再跟其他设置耦合
+            if (DOMElements.messageInput.dataset.keepFocus === '1') {
+                // 用户主动开启了保活：静默清空，绝对不触发 blur
+                DOMElements.messageInput.value = '';
+                DOMElements.messageInput.style.height = '46px';
+            } else {
+                // 用户没开保活（或点击发送按钮）：正常模式，清空并失焦（让键盘收起）
+                DOMElements.messageInput.value = '';
+                DOMElements.messageInput.style.height = '46px';
+                DOMElements.messageInput.blur();
+            }
+
+            // 清理标记
+            delete DOMElements.messageInput.dataset.keepFocus;
+
+            if (imageFile && imageFile.size > MAX_IMAGE_SIZE) {
+                showNotification('图片大小不能超过5MB', 'error');
+                DOMElements.imageInput.value = '';
+                return;
+            }
+
+            // 🌟【关键修复】：把 createMessage 的定义移到调用它的地方之前，解决 TDZ 报错
+            const createMessage = (imgSrc = null) => {
+                const messageData = {
+                    id: Date.now(),
+                    sender: 'user',
+                    text: text || '',
+                    timestamp: new Date(),
+                    image: imgSrc,
+                    status: 'sent',
+                    favorited: false,
+                    note: null,
+                    replyTo: currentReplyTo,
+                    type: type
+                };
+                if (type === 'system') messageData.sender = null;
+                addMessage(messageData);
+                if (type !== 'system') playSound('send');
+                currentReplyTo = null;
+                updateReplyPreview();
+                // 🌟 发送完毕后，把标记擦除，防止影响后续正常的失焦操作
+                delete DOMElements.messageInput.dataset.keepFocus;
+                if (type === 'normal') {
+                    window._replyAborted = false;
+                    const delayRange = settings.replyDelayMax - settings.replyDelayMin;
+                    const randomDelay = settings.replyDelayMin + Math.random() * delayRange;
+                    // 1. 【防抖核心】先清除之前的倒计时，并记住之前有没有在倒计时
+                    const hadPendingTimer = !!window._pendingReplyTimer;
+                    if (hadPendingTimer) {
+                        clearTimeout(window._pendingReplyTimer);
+                        window._pendingReplyTimer = null;
+                    }
+                    // 2. 核心逻辑分支
+                    if (hadPendingTimer) {
+                        // 【情况A】之前已经在计划回复了（可能正在输入中）
+                        // 此时绝对不允许“半途而废”，必须继续回复！
+                        // 直接把新发的这条也改成已读，然后重新开始倒计时
+                        _doMarkReadAndStartTyping();
+                    } else {
+                        // 【情况B】之前没有回复计划（消息处于安静未读状态）
+                        // 这是【唯一】允许投“不回复”骰子的时机！
+                        const shouldIgnore = settings.allowReadNoReply && (Math.random() < (settings.readNoReplyChance || 0.2));
+                        if (!shouldIgnore) {
+                            // 决定回复：改已读，开始输入
+                            _doMarkReadAndStartTyping();
+                        } else {
+                            // 决定不回复：什么都不干，安安静静保持未读
+                            // 确保没有幽灵的“正在输入”
+                            const tiWrapper = document.getElementById('typing-indicator-wrapper');
+                            if (tiWrapper) tiWrapper.style.display = 'none';
+                        }
+                    }
+                    // 抽离出来的“改已读并开始输入”的动作包
+                    function _doMarkReadAndStartTyping() {
+                        // 瞬间把所有未读改成已读
+                        let readChanged = false;
+                        messages.forEach(msg => {
+                            if (msg.sender === 'user' && msg.status !== 'read') {
+                                msg.status = 'read';
+                                readChanged = true;
+                            }
+                        });
+                        if (readChanged) {
+                            renderMessages(false);
+                            throttledSaveData();
+                        }
+                        // 显示“正在输入中”
+                        if (settings.typingIndicatorEnabled) {
+                            const tiWrapper = document.getElementById('typing-indicator-wrapper');
+                            const tiLabel = document.getElementById('typing-indicator-label');
+                            const tiAvatar = document.getElementById('typing-indicator-avatar');
+                            if (tiLabel) tiLabel.textContent = (settings.partnerName || '对方') + ' 正在输入';
+                            if (tiWrapper) {
+                                positionTypingIndicator();
+                                tiWrapper.style.display = 'block';
+                            }
+                            if (tiAvatar) {
+                                const partnerImg = DOMElements.partner.avatar.querySelector('img');
+                                tiAvatar.innerHTML = partnerImg ? `<img src="${partnerImg.src}">` : '<i class="fas fa-user"></i>';
+                            }
+                            if (DOMElements.chatContainer) DOMElements.chatContainer.scrollTop = DOMElements.chatContainer.scrollHeight;
+                        }
+                        // 重新设置倒计时
+                        window._pendingReplyTimer = setTimeout(() => {
+                            window._pendingReplyTimer = null;
+                            simulateReply();
+                        }, randomDelay);
+                    }
+                }
+            };
+
+            // ✅ 现在可以安全调用了
+            if (imageBase64) {
+                createMessage(imageBase64);
+                DOMElements.imageInput.value = '';
+                return;
+            }
+
+            if (imageFile) {
+                showNotification('正在优化图片...', 'info', 1500);
+                optimizeImage(imageFile).then(createMessage).catch(() => showNotification('图片处理失败', 'error'));
+            } else {
+                createMessage();
+            }
+            DOMElements.imageInput.value = '';
+
+            // 🔥 必须严格等于字符串 '1' 才抢焦点，彻底杜绝幽灵标记或类型错误
+            if (DOMElements.messageInput.dataset.keepFocus === '1') {
+                setTimeout(() => DOMElements.messageInput.focus(), 0);
+            }
         }
+
 
         function positionTypingIndicator() {
             var tiW = document.getElementById('typing-indicator-wrapper');

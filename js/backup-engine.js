@@ -210,11 +210,34 @@
         for (var i = 0; i < keys.length; i++) {
             var key = keys[i];
             if (shouldSkipKeyGroupChat(key, flags)) continue;
-            try {
+            /*try {
                 var rawVal = await localforage.getItem(key);
                 if (rawVal === null || rawVal === undefined) continue;
                 lfData[key] = deepCloneJsonSafe(rawVal);
-            } catch (e) { console.warn('[backup] 读取失败', key, e); }
+            } catch (e) { console.warn('[backup] 读取失败', key, e); }*/
+            try {
+                var rawVal = await localforage.getItem(key);
+                if (rawVal === null || rawVal === undefined) continue;
+                
+                // 👇 新增：专门拦截字体列表，把二进制转成 Base64 字符串
+                if (key.indexOf('local_font_list') !== -1 && Array.isArray(rawVal)) {
+                    rawVal = rawVal.map(function(font) {
+                        if (font && font.buffer && font.buffer instanceof ArrayBuffer) {
+                            var base64Str = uint8ToBase64Chunked(new Uint8Array(font.buffer));
+                            var clonedFont = Object.assign({}, font);
+                            clonedFont.buffer = base64Str; // 暂时换成字符串
+                            clonedFont.__isBase64Font = true; // 打个标记
+                            return clonedFont;
+                        }
+                        return font;
+                    });
+                }
+
+                lfData[key] = deepCloneJsonSafe(rawVal);
+            } catch (e) {
+                console.warn('[backup] 读取失败', key, e);
+            }
+
         }
         var lsData = {};
         for (var j = 0; j < localStorage.length; j++) {
@@ -477,51 +500,6 @@
      * @param {object} data 原始备份 JSON
      * @param {{ selective?: boolean, selectedCategoryIds?: string[], categories?: array }} opt
      */
-    /*async function applyBackupToStorage(data, opt) {
-        opt = opt || {};
-        var selective = !!opt.selective;
-        var mediaStore = data.mediaStore || {};
-        var lfRaw = getLfSource(data);
-        var lsRaw = data.localStorage || {};
-
-        if (selective && opt.selectedCategoryIds && opt.categories) {
-            lfRaw = filterLfByCategories(lfRaw, opt.selectedCategoryIds, opt.categories);
-            lsRaw = filterLsByCategories(lsRaw, opt.selectedCategoryIds, opt.categories);
-        }
-
-        var lfKeys = Object.keys(lfRaw);
-        var backupSid = data.sessionId || inferBackupSessionId(lfKeys, data.appPrefix);
-        var curSid = typeof SESSION_ID !== 'undefined' ? SESSION_ID : null;
-        var appPfx = data.appPrefix || (typeof APP_PREFIX !== 'undefined' ? APP_PREFIX : 'CHAT_APP_V3_');
-        var needRemap = backupSid && curSid && backupSid !== curSid;
-
-        for (var i = 0; i < lfKeys.length; i++) {
-            var lk = lfKeys[i];
-            var targetKey = needRemap ? remapLfKey(lk, backupSid, curSid, appPfx) : lk;
-            var val = inlineMediaTree(lfRaw[lk], mediaStore);
-            try {
-                await localforage.setItem(targetKey, val);
-            } catch (e) {
-                console.warn('[backup] 写入失败', targetKey, e);
-            }
-        }
-
-        for (var k in lsRaw) {
-            if (!Object.prototype.hasOwnProperty.call(lsRaw, k)) continue;
-            var targetLsKey = needRemap ? remapLfKey(k, backupSid, curSid, appPfx) : k;
-            try {
-                var lsv = processLocalStorageValueForImport(lsRaw[k], mediaStore);
-                if (typeof lsv === 'string' && lsv.indexOf('data:image/') === 0 && lsv.length > 2000) continue;
-                localStorage.setItem(targetLsKey, lsv);
-            } catch (e2) {
-                console.warn('[backup] localStorage 恢复失败', targetLsKey, e2);
-            }
-        }
-
-        if (typeof APP_PREFIX !== 'undefined' && typeof SESSION_ID !== 'undefined') {
-            try { await localforage.setItem(APP_PREFIX + 'lastSessionId', SESSION_ID); } catch (e3) {}
-        }
-    }*/
 
     async function applyBackupToStorage(data, opt) {
         opt = opt || {};
@@ -552,7 +530,33 @@
         for (var i = 0; i < lfKeys.length; i++) {
             var lk = lfKeys[i];
             var targetKey = needRemap ? remapLfKey(lk, backupSid, curSid, appPfx) : lk;
+            /*var val = inlineMediaTree(lfRaw[lk], mediaStore);
+            try {
+                await localforage.setItem(targetKey, val);
+            } catch (e) {
+                console.warn('[backup] 写入失败', targetKey, e);
+            }*/
             var val = inlineMediaTree(lfRaw[lk], mediaStore);
+            // 👇 新增：如果是字体列表，把 Base64 字符串还原回二进制 ArrayBuffer
+            if (targetKey.indexOf('local_font_list') !== -1 && Array.isArray(val)) {
+                val = val.map(function(font) {
+                    if (font && font.__isBase64Font && typeof font.buffer === 'string') {
+                        try {
+                            var binaryStr = atob(font.buffer);
+                            var bytes = new Uint8Array(binaryStr.length);
+                            for (var c = 0; c < binaryStr.length; c++) {
+                                bytes[c] = binaryStr.charCodeAt(c);
+                            }
+                            delete font.__isBase64Font;
+                            font.buffer = bytes.buffer; // 还原成真正的 ArrayBuffer
+                        } catch(e) {
+                            console.warn('[backup] 字体数据还原失败:', e);
+                        }
+                    }
+                    return font;
+                });
+            }
+
             try {
                 await localforage.setItem(targetKey, val);
             } catch (e) {

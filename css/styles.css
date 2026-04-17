@@ -648,7 +648,7 @@
         overflow: hidden;
         text-overflow: ellipsis;
         font-size: 10px;
-        font-family: 'Inter', 'Noto Serif SC', 'Cormorant Garamond', serif, -apple-system, BlinkMacSystemFont, sans-serif;
+        font-family: var(--font-family, 'Inter', 'Noto Serif SC', 'Cormorant Garamond', serif, -webkit-system, BlinkMacSystemFont, sans-serif);
         font-weight: 350;
         letter-spacing: 3px;
         font-style: normal;
@@ -4586,17 +4586,27 @@
         }
 
 
-        .reply-tabs {
+       /* .reply-tabs {
             display: flex;
             padding: 0 20px 15px;
             background-color: var(--secondary-bg);
             gap: 12px;
             border-bottom: 1px solid var(--border-color);
             flex-shrink: 0; 
+        }*/
+        .reply-tabs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            padding: 0 20px 15px;
+            background-color: var(--secondary-bg);
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
         }
 
+
         .reply-tab-btn {
-            flex: 1;
+           /* flex: 1;*/
             padding: 10px 0;
             border-radius: 20px;
 

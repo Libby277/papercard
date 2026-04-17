@@ -29,6 +29,15 @@ function getUniqueShuffled(arr, count) {
   return unique;
 }
 
+// 强制把最新的主回复库同步给留言板，解决删除不同步的问题
+function syncReplyPool() {
+  if (typeof customReplies !== 'undefined') {
+    boardData.boardReplyPool = [...customReplies];
+    saveData(); // 存进本地，防止刷新页面后又变回老数据
+  }
+}
+
+
 async function loadData() {
     try {
         const saved = await localforage.getItem(STORAGE_KEY);
@@ -122,15 +131,8 @@ async function saveData() { try { await localforage.setItem(STORAGE_KEY, boardDa
 // --- 核心：绝对时间锚点引擎 ---
 function checkStatus() {
   const now = Date.now();
-    // === 神奇测试模式（上线前记得关） ===
-  /*if (boardData.settings._testMode) {
-    // 踩掉缓存里的未来时间，强制变成3秒后
-    boardData.settings.nextAutoPostTime = now + 3000; 
-    // 测试概率：1是100%必发，改成0.3就是测概率不命中
-    boardData.settings._testProb = 1; 
-  }*/
-
-  let needRefreshList = false;
+  syncReplyPool();
+  //let needRefreshList = false;
   const processReplies = (threads) => {
     threads.forEach(thread => {
       if (!thread.expectedReplyTime && thread.replies.length > 0) {
@@ -449,6 +451,7 @@ function bindStaticEvents() {
 
 window.renderEnvelopeBoard = async function() {
     await loadData();
+    syncReplyPool();
     initModals();
     // 如果关了主动写留言板，且当前在对方界面，强制切回我的
     if (!(typeof settings !== 'undefined' && settings.boardPartnerWriteEnabled) && currentView === 'partner') {

@@ -748,13 +748,35 @@ async function generateScreenshot(msgs) {
 
 
         // 背景设置
-        let bgStyle = `background-color: ${primaryBg};`;
+        /*let bgStyle = `background-color: ${primaryBg};`;
         const bgImageVar = computedStyle.getPropertyValue('--chat-bg-image').trim();
         if (bgImageVar && bgImageVar !== 'none') {
             bgStyle = `background-image: ${bgImageVar}; background-size: 100% auto; background-position: top center; background-repeat: repeat-y;`;
         } else if (settings.backgroundUrl) {
             bgStyle = `background-image: url('${settings.backgroundUrl}'); background-size: 100% auto; background-position: top center; background-repeat: repeat-y;`;
+        }*/
+
+        // 背景设置 (适配 #real-bg-layer 新逻辑)
+        let bgStyle = `background-color: ${primaryBg};`;
+        try {
+        const bgLayer = document.getElementById('real-bg-layer');
+        if (bgLayer) {
+            const bgImg = bgLayer.querySelector('img');
+            if (bgImg && bgImg.src) {
+            const bgSrc = bgImg.src;
+            // 关键：必须包含 blob: 判断，否则 localforage 存的图会被跳过
+            const isSafeImg = bgSrc.startsWith('data:') || bgSrc.startsWith(window.location.origin) || bgSrc.startsWith('blob:');
+            if (isSafeImg) {
+                const isCoverMode = bgLayer.classList.contains('mode-cover');
+                bgStyle = `background-color: ${primaryBg}; background-image: url('${bgSrc}'); background-size: ${isCoverMode ? 'cover' : 'contain'}; background-position: center center; background-repeat: no-repeat;`;
+            }
+            }
         }
+        } catch (e) {
+        console.warn('截图获取背景失败:', e);
+        }
+
+
 
         // 头像URL获取
         let myAvatarUrl = '';
@@ -997,13 +1019,23 @@ async function generateScreenshot(msgs) {
             logging: false,
             windowWidth: phoneWidth,
             allowTaint: true,
-            ignoreElements: (element) => {
+            /*ignoreElements: (element) => {
             // ✨ 如果漏网了外部图片标签，直接让 html2canvas 无视它
                 if (element.tagName === 'IMG' && element.src && !element.src.startsWith('data:') && !element.src.startsWith(window.location.origin)) {
                     return true;
                 }
                 return false;
+            },*/
+            ignoreElements: (element) => {
+                if (element.tagName === 'IMG' && element.src) {
+                    const src = element.src;
+                    // 只放过：data: / 同源 / blob:（localforage）
+                    const isSafe = src.startsWith('data:') || src.startsWith(window.location.origin) || src.startsWith('blob:');
+                    if (!isSafe) return true; // 外部图床直接跳过，防卡死
+                }
+                return false;
             },
+
             onclone: (clonedDoc) => {
                 const clonedContainer = clonedDoc.body.querySelector('div[style*="width: 375px"]');
                 

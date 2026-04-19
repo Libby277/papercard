@@ -64,42 +64,6 @@ function checkDailyPeriodReminder() {
     }
 }
 
-/*function getCycleMessageForReminder() {
-    if (periodRecords.length === 0) return null;
-    
-    const sortedRecords = [...periodRecords].sort((a, b) => b.startDate - a.startDate);
-    const latestRecord = sortedRecords[0];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const startDate = new Date(latestRecord.startDate);
-    startDate.setHours(0, 0, 0, 0);
-    
-    // 月经期间
-    if (latestRecord && !latestRecord.endDate) {
-        const randomIndex = Math.floor(Math.random() * PERIOD_MESSAGES.during.length);
-        return `${settings.partnerName}：${PERIOD_MESSAGES.during[randomIndex]}`;
-    }
-    
-    // 有结束日期的情况
-    if (latestRecord.endDate) {
-        const daysUntilNext = calculateDaysUntilNextPeriod();
-        
-        // 月经临近提醒（前3天）
-        if (daysUntilNext !== null && daysUntilNext <= 3 && daysUntilNext > 0) {
-            const randomIndex = Math.floor(Math.random() * PERIOD_MESSAGES.approaching.length);
-            return `${settings.partnerName}：${PERIOD_MESSAGES.approaching[randomIndex]}`;
-        }
-        
-        // 月经推迟提醒
-        if (daysUntilNext !== null && daysUntilNext <= 0) {
-            const randomIndex = Math.floor(Math.random() * PERIOD_MESSAGES.delayed.length);
-            return `${settings.partnerName}：${PERIOD_MESSAGES.delayed[randomIndex]}`;
-        }
-    }
-    
-    return null;
-}*/
 
 function getCycleMessageForReminder() {
     // 1. 安全检查：如果没有记录，直接返回
@@ -536,6 +500,58 @@ function openPeriodModal() {
     }, 150);
 }
 
+// ================== 限时字卡池：核心判定逻辑 ==================
+
+/**
+ * 判断当前处于什么阶段
+ * 返回值：'approaching'(临近), 'during'(经期), 'delayed'(推迟), 或 null(平时)
+ */
+function getCurrentPeriodPhase() {
+    // 0. 没有记录或者没有设置文案，直接隐身
+    if (!periodRecords || periodRecords.length === 0) return null;
+    if (typeof periodCareMessages === 'undefined') return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 1. 检查是否处于“经期中”（有未结束的记录）
+    const activeRecord = periodRecords.find(r => !r.endDate);
+    if (activeRecord) {
+        return 'during';
+    }
+
+    // 2. 计算距离预测日的天数
+    const daysUntilNext = calculateDaysUntilNextPeriod();
+    
+    // 如果无法计算（比如记录太少没有完整的结束日期），返回 null
+    if (daysUntilNext === null) return null;
+
+    // 3. 检查是否处于“临近期”（预测日的前 1 到 7 天）
+    if (daysUntilNext >= 1 && daysUntilNext <= 7) {
+        return 'approaching';
+    }
+
+    // 4. 检查是否处于“推迟期”（逾期 1 到 7 天内）
+    if (daysUntilNext <= 0 && daysUntilNext >= -7) {
+        return 'delayed';
+    }
+
+    // 5. 其他时间，彻底隐身
+    return null;
+}
+
+/**
+ * 获取当前阶段应该激活的关怀文案数组
+ * 平时返回空数组，特殊时期返回对应文案
+ */
+function getActiveCareMessages() {
+    const phase = getCurrentPeriodPhase();
+    if (!phase) return []; // 平时直接给空数组，什么都不加
+    
+    const msgs = periodCareMessages[phase];
+    return Array.isArray(msgs) ? msgs : [];
+}
+
 // ===== 初始化监听器 =====
 function initPeriodListeners() {
     // 入口按钮
@@ -576,7 +592,7 @@ function initPeriodListeners() {
     if (endInput) endInput.max = today;
     
     // 检查每日提醒
-    setTimeout(checkDailyPeriodReminder, 5000);
+   // setTimeout(checkDailyPeriodReminder, 5000);
 }
 
 // 导出函数供其他模块调用

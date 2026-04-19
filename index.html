@@ -27,7 +27,7 @@
     <style id="css-live-preview-style"></style>
 </head>
 <body>
-
+<div id="real-bg-layer"></div>
 <div id="tour-overlay" class="tour-overlay">
     <div id="tour-highlight-box" class="tour-highlight-box"></div>
     <div id="tour-popover" class="tour-popover">
@@ -581,19 +581,19 @@
 
     
     <div class="settings-section" style="margin-top: 20px;">
-      <div class="settings-section-title">
-        <i class="fas fa-image"></i>聊天背景
-        <input type="file" id="bg-gallery-input" accept="image/*" style="display: none;">
-      </div>
-      <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;opacity:0.75;line-height:1.5;">
-        支持图片及 GIF 动图。点击 <i class="fas fa-plus" style="font-size:10px;"></i> 添加，点击项目应用。
-      </div>
-      <div class="bg-gallery" id="background-gallery-list"></div>
-      <div style="text-align: center; margin-top: 10px;">
-        <button class="modal-btn modal-btn-secondary" id="reset-default-bg" style="font-size: 12px; padding: 6px 12px;">
-          <i class="fas fa-undo"></i> 恢复默认背景
-        </button>
-      </div>
+        <div class="settings-section-title">
+            <i class="fas fa-image"></i>聊天背景
+            <input type="file" id="bg-gallery-input" accept="image/*" style="display: none;">
+        </div>
+        <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;opacity:0.75;line-height:1.5;">
+            点击 <i class="fas fa-plus" style="font-size:10px;"></i> 添加，点击项目应用。
+        </div>
+        <div class="bg-gallery" id="background-gallery-list"></div>
+        <div style="text-align: center; margin-top: 10px;">
+            <button id="bg-mode-contain" class="modal-btn modal-btn-secondary" style="font-size: 12px; padding: 6px 12px;" onclick="switchBgMode('contain')">原图大小</button>
+            <button id="bg-mode-cover" class="modal-btn modal-btn-secondary" style="font-size: 12px; padding: 6px 12px;" onclick="switchBgMode('cover')">适应屏幕</button>
+            <button class="modal-btn modal-btn-secondary" id="reset-default-bg" style="font-size: 12px; padding: 6px 12px;"> 恢复默认背景</button>
+        </div>
     </div>
     
     <div class="modal-buttons" style="position:sticky;bottom:0;background:var(--secondary-bg);border-top:1px solid var(--border-color);padding:12px 0 0;z-index:10;margin-top:8px;margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px;padding-bottom:max(12px, env(safe-area-inset-bottom, 0px));">

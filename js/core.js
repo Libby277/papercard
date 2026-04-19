@@ -109,6 +109,7 @@ autoSendInterval: 5,
         boardPartnerWriteEnabled: false,
         keepKeyboardAlive: false,
         activeLocalFontId: null,
+        bgDisplayMode: 'contain',
             };
         }
 
@@ -185,7 +186,7 @@ autoSendInterval: 5,
 }
 
 
-        const applyBackground = (value) => {
+        /*const applyBackground = (value) => {
             if (!value || typeof value !== 'string') return;
             try {
                 if (value.startsWith('linear-gradient') || value.startsWith('#') || value.startsWith('rgb')) {
@@ -198,7 +199,61 @@ autoSendInterval: 5,
             } catch (e) {
                 if (typeof removeBackground === 'function') removeBackground();
             }
-        };
+        };*/
+
+const applyBackground = (value, mode = 'contain') => {
+    const layer = document.getElementById('real-bg-layer');
+    if (!layer) return;
+    
+    // 清理旧状态，但不清理 className（由下方统一设置）
+    layer.innerHTML = '';
+    layer.style.backgroundImage = '';
+    layer.style.backgroundColor = 'var(--primary-bg)';
+    document.body.classList.remove('with-background');
+    
+    if (!value || typeof value !== 'string') {
+        layer.className = ''; 
+        return;
+    }
+
+    if (value.startsWith('linear-gradient') || value.startsWith('#') || value.startsWith('rgb')) {
+        layer.style.backgroundColor = value;
+        layer.className = '';
+        return;
+    }
+
+    const setBgFromBlob = (blob) => {
+        const url = URL.createObjectURL(blob);
+        if (mode === 'repeat') {
+            layer.style.backgroundImage = `url(${url})`;
+            layer.style.backgroundSize = 'auto';
+        } else {
+            const img = document.createElement('img');
+            img.src = url; img.alt = 'bg';
+            layer.appendChild(img);
+        }
+        document.body.classList.add('with-background');
+    };
+
+    if (value.startsWith('blob:')) {
+        if (mode === 'repeat') { layer.style.backgroundImage = `url(${value})`; layer.style.backgroundSize = 'auto'; }
+        else { const img = document.createElement('img'); img.src = value; img.alt = 'bg'; layer.appendChild(img); }
+        document.body.classList.add('with-background');
+    } else if (value.startsWith('data:')) {
+        fetch(value).then(res => res.blob()).then(blob => setBgFromBlob(blob)).catch(() => {
+            if (mode === 'repeat') { layer.style.backgroundImage = `url(${value})`; layer.style.backgroundSize = 'auto'; }
+            else { const img = document.createElement('img'); img.src = value; img.alt = 'bg'; layer.appendChild(img); }
+            document.body.classList.add('with-background');
+        });
+    } else {
+        if (mode === 'repeat') { layer.style.backgroundImage = `url(${value})`; layer.style.backgroundSize = 'auto'; }
+        else { const img = document.createElement('img'); img.src = value; img.alt = 'bg'; layer.appendChild(img); }
+        document.body.classList.add('with-background');
+    }
+
+    // 🔥 核心修复：在最末尾统一赋予模式 class，解决点击不生效的问题
+    layer.className = `mode-${mode}`;
+};
 
 
 const loadData = async () => {
@@ -925,13 +980,27 @@ function manageAutoSendTimer() {
             if (src) element.innerHTML = `<img src="${src}" alt="avatar">`; else element.innerHTML = `<i class="fas fa-user"></i>`;
         };
 
-        const removeBackground = () => {
+        /*const removeBackground = () => {
             document.documentElement.style.removeProperty('--chat-bg-image');
             document.body.classList.remove('with-background');
             localforage.removeItem(getStorageKey('chatBackground'));
             safeRemoveItem(getStorageKey('chatBackground'));
             showNotification('背景图片已移除', 'success');
+        };*/
+        const removeBackground = () => {
+            const layer = document.getElementById('real-bg-layer');
+            if (layer) {
+                layer.innerHTML = '';
+                layer.className = '';
+                layer.style.backgroundImage = '';
+                layer.style.backgroundColor = 'var(--primary-bg)';
+            }
+            document.body.classList.remove('with-background');
+            localforage.removeItem(getStorageKey('chatBackground'));
+            safeRemoveItem(getStorageKey('chatBackground'));
+            showNotification('背景图片已移除', 'success');
         };
+
 
 
         window.scrollToQuotedMessage = function(el) {
@@ -1835,7 +1904,12 @@ function manageAutoSendTimer() {
                         });
                     }
                     const replyPool = customReplies.filter(r => !disabledItems.has(r) && !disabledGroupItems.has(r));
-                    const replyText = replyPool[Math.floor(Math.random() * replyPool.length)];
+                    //const replyText = replyPool[Math.floor(Math.random() * replyPool.length)];
+                   // 🌟 限时字卡：获取当前特殊文案
+                    const careMsgs = (typeof getActiveCareMessages === 'function') ? getActiveCareMessages() : [];
+                    const finalPool = careMsgs.length > 0 ? [...replyPool, ...careMsgs] : replyPool;
+                    const replyText = finalPool[Math.floor(Math.random() * finalPool.length)];
+
 
                     // Bug fix 2: 30% chance partner sends a sticker image instead of (or after) text
                     const shouldSendSticker = stickerLibrary && stickerLibrary.length > 0 && Math.random() < 0.3;
@@ -2588,39 +2662,6 @@ if (customStatuses && customStatuses.length > 0) {
             }
         }
 
-        /*async function createNewSession(save = true) {
-            const id = 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
-            const newSession = {
-                id: id,
-                name: '默认会话',
-                createdAt: Date.now()
-            };
-            sessionList.push(newSession);
-            if (save) {
-                await localforage.setItem(`${APP_PREFIX}sessionList`, sessionList);
-            }
-            return id;
-        }*/
-
-       /* async function initializeSession() {
-            
-            await migrateData();
-
-            const sessionsData = await localforage.getItem(`${APP_PREFIX}sessionList`);
-            sessionList = sessionsData || [];
-
-            const hash = window.location.hash.substring(1);
-            if (hash && sessionList.some(s => s.id === hash)) {
-                SESSION_ID = hash;
-            } else if (sessionList.length > 0) {
-                const lastId = await localforage.getItem(`${APP_PREFIX}lastSessionId`);
-                SESSION_ID = lastId && sessionList.some(s => s.id === lastId) ? lastId : sessionList[0].id;
-            } else {
-                SESSION_ID = await createNewSession(false);
-            }
-
-            await localforage.setItem(`${APP_PREFIX}lastSessionId`, SESSION_ID);
-        }*/
        async function initializeSession() {
             await migrateData();
             // ====== 极简单会话模式：不读列表，不判断哈希，就认死理 ======
@@ -2632,4 +2673,37 @@ if (customStatuses && customStatuses.length > 0) {
             SESSION_ID = currentId;
             await localforage.setItem(`${APP_PREFIX}lastSessionId`, SESSION_ID);
         }
+// ====== 壁纸模式切换与初始化逻辑 ======
+function switchBgMode(mode) {
+    if (typeof settings === 'undefined') return;
+    settings.bgDisplayMode = mode;
+    if (typeof throttledSaveData === 'function') throttledSaveData();
+    
+    const layer = document.getElementById('real-bg-layer');
+    if (layer) layer.className = `mode-${mode}`;
+    
+    const currentBg = safeGetItem(getStorageKey('chatBackground'));
+    if (currentBg) applyBackground(currentBg, mode);
+    document.getElementById('bg-mode-contain').classList.toggle('active', mode === 'contain');
+    document.getElementById('bg-mode-cover').classList.toggle('active', mode === 'cover');
+    showNotification(`已切换为${mode === 'contain' ? '原图大小' : '适应屏幕'}模式`, 'success');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    const layer = document.getElementById('real-bg-layer');
+    // 等待数据加载完后再应用保存的模式
+    setTimeout(() => {
+        if (layer && typeof settings !== 'undefined' && settings.bgDisplayMode) {
+            layer.className = `mode-${settings.bgDisplayMode}`;
+        }
+        
+        // 👇 就是加这两行！页面加载完直接把按钮状态锁死
+        const currentMode = settings.bgDisplayMode || 'contain';
+        const containBtn = document.getElementById('bg-mode-contain');
+        const coverBtn = document.getElementById('bg-mode-cover');
+        if (containBtn) containBtn.classList.toggle('active', currentMode === 'contain');
+        if (coverBtn) coverBtn.classList.toggle('active', currentMode === 'cover');
+
+    }, 500); // 延迟半秒，确保 settings 已经加载完毕
+});
 

@@ -191,128 +191,14 @@ function checkStatus() {
 
 }
 
+
 /*function generatePartnerReply() {
-  const pool = boardData.boardReplyPool;
-  const stickers = (typeof stickerLibrary !== 'undefined' && stickerLibrary.length > 0) ? [...stickerLibrary] : [];
-  const emojis = (typeof customEmojis !== 'undefined' && customEmojis.length > 0) ? [...customEmojis] : [];
-  if (pool.length === 0 && stickers.length === 0) return null;
-
-  const resultArray = [];
-  const punctuations = ['。', '！', '…', '～', '，', '、'];
-
-  // 1. 拼文本
-  const count = 8 + Math.floor(Math.random() * 5);
-  const uniquePool = getUniqueShuffled(pool, count);
-  let text = uniquePool.map(s => s + punctuations[Math.floor(Math.random() * punctuations.length)]).join('');
-
-  // 2. 15%概率混入emoji（直接改text本身，不要推两遍）
-  if (emojis.length > 0 && Math.random() < 0.15) {
-    const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-    const randomPos = Math.floor(Math.random() * text.length);
-    text = text.slice(0, randomPos) + emoji + text.slice(randomPos);
-  }
-
-  // 3. 统一推一次文本
-  resultArray.push({ id: genId(), sender: 'partner', text, image: null, sticker: null, timestamp: Date.now() });
-
-  // 4. 0.35概率发表情包
-  if (stickers.length > 0 && Math.random() < 0.35) {
-    const stickerCount = Math.random() < 0.5 ? 1 : 2;
-    const pickedStickers = getUniqueShuffled(stickers, stickerCount);
-    pickedStickers.forEach(st => {
-      resultArray.push({ id: genId(), sender: 'partner', text: '', image: null, sticker: st, timestamp: Date.now() });
-    });
-  }
-
-  return resultArray.length > 0 ? resultArray : null;
-}*/
-/*function generatePartnerReply() {
-     const pool = boardData.boardReplyPool;
-    const stickers = (typeof stickerLibrary !== 'undefined' && stickerLibrary.length > 0) ? [...stickerLibrary] : [];
-    const emojis = (typeof customEmojis !== 'undefined' && customEmojis.length > 0) ? [...customEmojis] : [];
-    if (pool.length === 0 && stickers.length === 0) return null;
-
-    const punctuations = ['。', '！', '…', '～', '，', '、'];
-
-   // 1. 拼文本
-    const count = 8 + Math.floor(Math.random() * 5);
-    const uniquePool = getUniqueShuffled(pool, count);
-    let text = uniquePool.map(s => s + punctuations[Math.floor(Math.random() * punctuations.length)]).join('');
-
-    // 2. 15%概率混入emoji
-    if (emojis.length > 0 && Math.random() < 0.15) {
-        const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-        const randomPos = Math.floor(Math.random() * text.length);
-        text = text.slice(0, randomPos) + emoji + text.slice(randomPos);
-    }
-
-    // 3. 0.35概率抽取表情包（不生成独立对象了，存成数组放在同一条消息里）
-    let pickedStickers = [];
-    if (stickers.length > 0 && Math.random() < 0.35) {
-        const stickerCount = Math.random() < 0.5 ? 1 : 2;
-        pickedStickers = getUniqueShuffled(stickers, stickerCount);
-    }
-
-    // 4. 统一合并成【唯一的】一条回复消息
-    const replyObj = { 
-        id: genId(), 
-        sender: 'partner', 
-        text: text, 
-        image: null, 
-        sticker: null, // 保留此字段以防影响老数据，但新逻辑不再读取它
-        stickers: pickedStickers, // ✅ 新增：用数组存放多个表情包
-        timestamp: Date.now() 
-    };
-
-    return [replyObj]; // ✅ 返回只包含1个对象的数组
-
-  // 1. 拆分出句子（按标点符号断句，保留标点）
-  const count = 8 + Math.floor(Math.random() * 5);
-  const uniquePool = getUniqueShuffled(pool, count);
-  const punctuations = ['。', '！', '…', '～', '，', '、'];
-  const rawSentences = uniquePool.map(s => s + punctuations[Math.floor(Math.random() * punctuations.length)]);
-
-  // 2. 留言板专属 Emoji 策略（模拟活人打字节奏）
-  let finalText = '';
-  const hasStickers = pickedStickers.length > 0;
-  // 决定这一整段留言里，最多能加几个 Emoji
-  const maxEmoji = hasStickers ? 1 : 4; 
-  let usedEmoji = 0;
-
-  // 70% 概率开启“加表情模式”
-  if (emojis.length > 0 && Math.random() < 0.7) {
-    // 遍历所有句子，随机决定哪一句加表情
-    rawSentences.forEach((sentence, index) => {
-      finalText += sentence;
-      
-      // 如果还没用完配额，这一句有 35% 的机会获得 Emoji
-      if (usedEmoji < maxEmoji && Math.random() < 0.35) {
-        const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-        finalText += emoji;
-        usedEmoji++;
-      }
-    });
-  } else {
-    // 没触发表情模式，纯文字拼接
-    finalText = rawSentences.join('');
-  }
-
-  // 3. 统一合并成【唯一的】一条回复消息
-  const replyObj = {
-    id: genId(),
-    sender: 'partner',
-    text: finalText,
-    image: null,
-    sticker: null,
-    stickers: pickedStickers,
-    timestamp: Date.now()
-  };
-  return [replyObj];
-
-}*/
-
+    const pool = boardData.boardReplyPool;*/
 function generatePartnerReply() {
-    const pool = boardData.boardReplyPool;
+	// 🌟 限时字卡：获取当前特殊文案并临时混入留言池
+	const careMsgs = (typeof getActiveCareMessages === 'function') ? getActiveCareMessages() : [];
+	const pool = careMsgs.length > 0 ? [...boardData.boardReplyPool, ...careMsgs] : boardData.boardReplyPool;
+
     const stickers = (typeof stickerLibrary !== 'undefined' && stickerLibrary.length > 0) ? [...stickerLibrary] : [];
     const emojis = (typeof customEmojis !== 'undefined' && customEmojis.length > 0) ? [...customEmojis] : [];
     if (pool.length === 0 && stickers.length === 0) return null;

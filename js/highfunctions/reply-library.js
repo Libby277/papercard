@@ -2436,9 +2436,9 @@ function applyAllAvatarFrames() {
 // ===== 月经关怀板块 =====
 function _renderPeriodCareTab(list) {
     const categories = [
-        { id: 'approaching', name: '月经临近', icon: '📅', color: '#FF9800', desc: '月经来临前3天发送' },
-        { id: 'during', name: '月经期间', icon: '🌸', color: '#E91E63', desc: '月经期间每天发送' },
-        { id: 'delayed', name: '月经推迟', icon: '⏰', color: '#9C27B0', desc: '月经推迟时发送' }
+        { id: 'approaching', name: '月经临近', icon: '📅', color: '#FF9800', desc: '预期来前1~7天，自动混入聊天和留言' },
+        { id: 'during', name: '月经期间', icon: '🌸', color: '#E91E63', desc: '经期中，自动混入聊天和留言' },
+        { id: 'delayed', name: '月经推迟', icon: '⏰', color: '#9C27B0', desc: '逾期1~7天，自动混入聊天和留言' }
     ];
     
     list.innerHTML = `
@@ -2593,37 +2593,3 @@ function _renderPeriodCareTab(list) {
         `).join('')}
     `;
 }
-
-// 添加月经关怀消息
-/*window.addPeriodCareMsg = function(category) {
-    const input = prompt('请输入新的关怀消息：');
-    if (input && input.trim()) {
-        periodCareMessages[category].push(input.trim());
-        throttledSaveData();
-        _renderPeriodCareTab(document.getElementById('custom-replies-list'));
-        showNotification('已添加', 'success');
-    }
-};
-
-// 编辑月经关怀消息
-window.editPeriodCareMsg = function(category, index) {
-    const current = periodCareMessages[category][index];
-    const input = prompt('编辑消息：', current);
-    if (input !== null && input.trim()) {
-        periodCareMessages[category][index] = input.trim();
-        throttledSaveData();
-        _renderPeriodCareTab(document.getElementById('custom-replies-list'));
-        showNotification('已保存', 'success');
-    }
-};
-
-// 删除月经关怀消息
-window.deletePeriodCareMsg = function(category, index) {
-    if (confirm('确定删除这条消息吗？')) {
-        periodCareMessages[category].splice(index, 1);
-        throttledSaveData();
-        _renderPeriodCareTab(document.getElementById('custom-replies-list'));
-        showNotification('已删除', 'success');
-    }
-};*/
-

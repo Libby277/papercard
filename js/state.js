@@ -329,7 +329,7 @@ window._setRegVal = (id, val) => {
 
         };
 // 月经系统变量
-let periodRecords = [];
+/*let periodRecords = [];
 let lastPeriodReminderCheck = null;
 let periodSettings = {
     averageCycleLength: 28,
@@ -341,4 +341,18 @@ let periodCareMessages = {
     approaching: [],
     during: [],
     delayed: []
+};*/
+window.periodRecords = [];
+window.lastPeriodReminderCheck = null;
+window.periodSettings = {
+    averageCycleLength: 28,
+    lastCalculation: null,
 };
+
+// 月经关怀消息
+window.periodCareMessages = {
+    approaching: [],
+    during: [],
+    delayed: []
+};
+

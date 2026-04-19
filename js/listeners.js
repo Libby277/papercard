@@ -1554,7 +1554,7 @@ document.getElementById('chat-settings').addEventListener('click', () => {
             });
 
 
-            const bgInput = document.getElementById('bg-gallery-input');
+           /* const bgInput = document.getElementById('bg-gallery-input');
             if (bgInput) {
                 bgInput.addEventListener('change', (e) => {
                     const file = e.target.files[0];
@@ -1581,6 +1581,31 @@ document.getElementById('chat-settings').addEventListener('click', () => {
                         showNotification('新背景已添加并应用', 'success');
                     };
                     reader.readAsDataURL(file);
+                    e.target.value = '';
+                });
+            }*/
+           // ---------- 替换成这段 ----------
+            const bgInput = document.getElementById('bg-gallery-input');
+            if (bgInput) {
+                bgInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    if (file.size > 10 * 1024 * 1024) {
+                        showNotification('背景图片不能超过10MB', 'error');
+                        return;
+                    }
+                    showNotification('正在优化图片以适配手机...', 'info', 1500);
+                    optimizeImage(file, 1200, 0.8).then(base64 => {
+                        savedBackgrounds.push({ id: `user-${Date.now()}`, type: 'image', value: base64 });
+                        saveBackgroundGallery();
+                        renderBackgroundGallery();
+                        applyBackground(base64);
+                        localforage.setItem(getStorageKey('chatBackground'), base64);
+                        showNotification('新背景已添加并应用', 'success');
+                    }).catch(err => {
+                        console.error('背景图处理失败:', err);
+                        showNotification('图片处理失败，请换一张试试', 'error');
+                    });
                     e.target.value = '';
                 });
             }

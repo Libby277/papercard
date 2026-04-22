@@ -46,128 +46,67 @@ function savePeriodData() {
     }
 }
 
-// ===== 每日提醒检查 =====
-function checkDailyPeriodReminder() {
-    const today = new Date().toDateString();
-    
-    if (lastPeriodReminderCheck === today) return;
-    
-    lastPeriodReminderCheck = today;
-    localforage.setItem(getStorageKey('lastPeriodReminderCheck'), today);
-    
-    const message = getCycleMessageForReminder();
-    
-    if (message) {
-        setTimeout(() => {
-            showNotification(`${message}`, 'info', 6000);
-        }, 4000);
-    }
-}
-
-
-function getCycleMessageForReminder() {
-    // 1. 安全检查：如果没有记录，直接返回
-    if (periodRecords.length === 0) return null;
-
-    const sortedRecords = [...periodRecords].sort((a, b) => b.startDate - a.startDate);
-    const latestRecord = sortedRecords[0];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startDate = new Date(latestRecord.startDate);
-    startDate.setHours(0, 0, 0, 0);
-
-    // 2. 获取用户自定义语句，如果不存在则使用空数组作为兜底
-    // 注意：这里改为 periodCareMessages，与 config.js 保持一致
-    const duringMsgs = (typeof periodCareMessages !== 'undefined' && periodCareMessages.during) ? periodCareMessages.during : [];
-    const approachingMsgs = (typeof periodCareMessages !== 'undefined' && periodCareMessages.approaching) ? periodCareMessages.approaching : [];
-    const delayedMsgs = (typeof periodCareMessages !== 'undefined' && periodCareMessages.delayed) ? periodCareMessages.delayed : [];
-
-    // 月经期间
-    if (latestRecord && !latestRecord.endDate) {
-        if (duringMsgs.length > 0) {
-            const randomIndex = Math.floor(Math.random() * duringMsgs.length);
-            return `${settings.partnerName}：${duringMsgs[randomIndex]}`;
-        }
-        return null; // 用户没设置语句就不提醒
-    }
-
-    // 有结束日期的情况
-    if (latestRecord.endDate) {
-        const daysUntilNext = calculateDaysUntilNextPeriod();
-
-        // 月经临近提醒（前3天）
-        if (daysUntilNext !== null && daysUntilNext <= 3 && daysUntilNext > 0) {
-            if (approachingMsgs.length > 0) {
-                const randomIndex = Math.floor(Math.random() * approachingMsgs.length);
-                return `${settings.partnerName}：${approachingMsgs[randomIndex]}`;
-            }
-        }
-
-        // 月经推迟提醒
-        if (daysUntilNext !== null && daysUntilNext <= 0) {
-            if (delayedMsgs.length > 0) {
-                const randomIndex = Math.floor(Math.random() * delayedMsgs.length);
-                return `${settings.partnerName}：${delayedMsgs[randomIndex]}`;
-            }
-        }
-    }
-    return null;
-}
-
-
-// ===== 获取当前周期关怀话语 =====
-// 修改 getCycleMessage 函数
+// ===== 获取当前周期关怀话语 (极简静态版 + 手机端点击自定义) =====
 function getCycleMessage() {
     const partnerName = (typeof settings !== 'undefined' && settings.partnerName) ? settings.partnerName : '梦角';
-    
-    if (typeof periodRecords === 'undefined' || periodRecords.length === 0) {
-        return `${partnerName}：我会在这里守着你`;
-    }
-    
-    const sortedRecords = [...periodRecords].sort((a, b) => b.startDate - a.startDate);
-    const latestRecord = sortedRecords[0];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const startDate = new Date(latestRecord.startDate);
-    startDate.setHours(0, 0, 0, 0);
-    
-    // 月经期间
-    if (latestRecord && !latestRecord.endDate) {
-        const messages = periodCareMessages.during;
-        if (messages && messages.length > 0) {
-            const randomIndex = Math.floor(Math.random() * messages.length);
-            return `${partnerName}：${messages[randomIndex]}`;
-        }
-        return `${partnerName}：这几天要好好休息`;
-    }
-    
-    if (latestRecord.endDate) {
-        const daysUntilNext = calculateDaysUntilNextPeriod();
-        
-        // 月经临近
-        if (daysUntilNext !== null && daysUntilNext <= 3 && daysUntilNext > 0) {
-            const messages = periodCareMessages.approaching;
-            if (messages && messages.length > 0) {
-                const randomIndex = Math.floor(Math.random() * messages.length);
-                return `${partnerName}：${messages[randomIndex]}`;
-            }
-            return `${partnerName}：特殊日子快来了，注意休息`;
-        }
-        
-        // 月经推迟
-        if (daysUntilNext !== null && daysUntilNext <= 0) {
-            const messages = periodCareMessages.delayed;
-            if (messages && messages.length > 0) {
-                const randomIndex = Math.floor(Math.random() * messages.length);
-                return `${partnerName}：${messages[randomIndex]}`;
-            }
-            return `${partnerName}：周期有点乱，最近累到了？`;
-        }
-    }
-    
-    return `${partnerName}：我会在这里守着你`;
+    // 优先读取用户自定义的文案，没设置就用默认的
+    const customMsg = periodSettings.customCareMessage || '我会在这里守着你';
+    return `${partnerName}：${customMsg}`;
 }
+
+// 🌟 新增：手机端专属点击自定义（使用 contenteditable 防止键盘弹起顶乱页面）
+function handleCareMessageClick(e) {
+    e.stopPropagation(); 
+    const messageEl = document.getElementById('period-random-message');
+    if (!messageEl) return;
+    
+    // 防止重复触发
+    if (messageEl.getAttribute('data-editing') === 'true') return;
+    messageEl.setAttribute('data-editing', 'true');
+
+    const currentText = periodSettings.customCareMessage || '我会在这里守着你';
+    
+    // 变成可编辑状态，不使用 input，防止手机端键盘弹起顶乱布局
+    messageEl.innerHTML = `
+        <i class="fas fa-pen" style="color: #e91e63; margin-right: 8px; font-size: 12px;"></i>
+        <span contenteditable="true" 
+              style="outline: none; border-bottom: 1px dashed #e91e63; padding-bottom: 2px; flex: 1; word-break: break-all;"
+              id="care-edit-span">${currentText}</span>
+        <button style="margin-left: 8px; padding: 4px 12px; background: #e91e63; color: #fff; 
+                border: none; border-radius: 4px; font-size: 13px; flex-shrink: 0;">保存</button>
+    `;
+    messageEl.style.display = 'flex';
+    messageEl.style.alignItems = 'center';
+
+    const editSpan = messageEl.querySelector('#care-edit-span');
+    const saveBtn = messageEl.querySelector('button');
+    
+    // 自动聚焦并全选文字
+    editSpan.focus();
+    const range = document.createRange();
+    range.selectNodeContents(editSpan);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    // 保存逻辑
+    const saveCustomMessage = () => {
+        const newText = editSpan.innerText.trim();
+        if (newText && newText !== currentText) {
+            periodSettings.customCareMessage = newText;
+            savePeriodData(); 
+            showNotification('已更新', 'success', 1500);
+        }
+        messageEl.removeAttribute('data-editing');
+        updatePeriodCycleMessage(); // 恢复正常显示
+    };
+
+    saveBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        saveCustomMessage();
+    });
+}
+
 
 // ===== 计算函数 =====
 function calculatePeriodDuration(record) {
@@ -384,13 +323,110 @@ function updatePeriodHistoryList() {
     historyList.innerHTML = historyHTML;
 }
 
-function updatePeriodCycleMessage() {
+/*function updatePeriodCycleMessage() {
     const messageElement = document.getElementById('period-random-message');
     if (!messageElement) return;
     
     const message = getCycleMessage();
     messageElement.innerHTML = `<i class="fas fa-heart" style="color: #e91e63; margin-right: 8px;"></i>${message}`;
+}*/
+function updatePeriodCycleMessage() {
+    const messageElement = document.getElementById('period-random-message');
+    if (!messageElement) return;
+    
+    const message = getCycleMessage();
+    // 只保留纯洁的文字，不加任何花里胡哨的交互样式
+    messageElement.innerHTML = `<i class="fas fa-heart" style="color: #e91e63; margin-right: 8px;"></i>${message}`;
+    
+    // 绑定点击事件（弹出模态框修改）
+    // 为了防止每次更新UI都重复绑定，先解绑再绑
+    messageElement.onclick = null; 
+    messageElement.onclick = function() {
+        openCareMessageEditor();
+    };
 }
+
+// 🌟 新增：弹出修改弹窗
+function openCareMessageEditor() {
+    const currentText = periodSettings.customCareMessage || '我会在这里守着你';
+    
+    // 创建一个轻量级的修改弹窗
+    const editorModal = document.createElement('div');
+    editorModal.className = 'modal';
+    editorModal.id = 'care-msg-editor-modal';
+    editorModal.innerHTML = `
+        <div class="modal-content" style="padding: 20px;">
+            <div class="modal-title" style="margin-bottom: 16px;">
+                <i class="fas fa-pen-fancy"></i>
+                <span>修改关心提醒</span>
+            </div>
+            <textarea id="care-msg-input" style="width: 100%; min-height: 80px; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--secondary-bg); color: var(--text-primary); font-size: 14px; resize: none; outline: none; box-sizing: border-box;">${currentText}</textarea>
+            <div class="modal-buttons" style="margin-top: 16px;">
+                <button class="modal-btn modal-btn-secondary" id="cancel-care-edit">取消</button>
+                <button class="modal-btn modal-btn-secondary" id="reset-care-edit">恢复默认</button>
+                <button class="modal-btn modal-btn-primary" id="save-care-edit">保存</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(editorModal);
+    
+    // 兼容你系统的弹窗动画
+    if (typeof showModal === 'function') {
+        showModal(editorModal);
+    } else {
+        editorModal.style.display = 'flex';
+    }
+    
+    // 自动聚焦输入框
+    setTimeout(() => {
+        const input = document.getElementById('care-msg-input');
+        if(input) {
+            input.focus();
+            // 光标移到文字最后
+            input.setSelectionRange(input.value.length, input.value.length);
+        }
+    }, 200);
+
+    // 保存逻辑
+    const saveAction = () => {
+        const newText = document.getElementById('care-msg-input').value.trim();
+        if (newText) {
+            periodSettings.customCareMessage = newText;
+            savePeriodData();
+            updatePeriodCycleMessage(); // 刷新显示
+            showNotification('修改成功', 'success', 1500);
+        }
+        closeEditor();
+    };
+
+    // 关闭逻辑
+    const closeEditor = () => {
+        if (typeof hideModal === 'function') {
+            hideModal(editorModal);
+            setTimeout(() => editorModal.remove(), 300);
+        } else {
+            editorModal.style.display = 'none';
+            editorModal.remove();
+        }
+    };
+
+    // 绑定按钮
+    document.getElementById('save-care-edit').addEventListener('click', saveAction);
+    document.getElementById('cancel-care-edit').addEventListener('click', closeEditor);
+    // 🌟 恢复默认按钮逻辑
+    document.getElementById('reset-care-edit').addEventListener('click', () => {
+        document.getElementById('care-msg-input').value = '我会在这里守着你';
+        showNotification('已重置为默认文案', 'info', 1500);
+    });
+    
+    // 点击遮罩层关闭
+    editorModal.addEventListener('click', (e) => {
+        if (e.target === editorModal) closeEditor();
+    });
+}
+
+
 
 // ===== 记录操作 =====
 function startPeriodRecord() {
@@ -500,57 +536,6 @@ function openPeriodModal() {
     }, 150);
 }
 
-// ================== 限时字卡池：核心判定逻辑 ==================
-
-/**
- * 判断当前处于什么阶段
- * 返回值：'approaching'(临近), 'during'(经期), 'delayed'(推迟), 或 null(平时)
- */
-function getCurrentPeriodPhase() {
-    // 0. 没有记录或者没有设置文案，直接隐身
-    if (!periodRecords || periodRecords.length === 0) return null;
-    if (typeof periodCareMessages === 'undefined') return null;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // 1. 检查是否处于“经期中”（有未结束的记录）
-    const activeRecord = periodRecords.find(r => !r.endDate);
-    if (activeRecord) {
-        return 'during';
-    }
-
-    // 2. 计算距离预测日的天数
-    const daysUntilNext = calculateDaysUntilNextPeriod();
-    
-    // 如果无法计算（比如记录太少没有完整的结束日期），返回 null
-    if (daysUntilNext === null) return null;
-
-    // 3. 检查是否处于“临近期”（预测日的前 1 到 7 天）
-    if (daysUntilNext >= 1 && daysUntilNext <= 7) {
-        return 'approaching';
-    }
-
-    // 4. 检查是否处于“推迟期”（逾期 1 到 7 天内）
-    if (daysUntilNext <= 0 && daysUntilNext >= -7) {
-        return 'delayed';
-    }
-
-    // 5. 其他时间，彻底隐身
-    return null;
-}
-
-/**
- * 获取当前阶段应该激活的关怀文案数组
- * 平时返回空数组，特殊时期返回对应文案
- */
-function getActiveCareMessages() {
-    const phase = getCurrentPeriodPhase();
-    if (!phase) return []; // 平时直接给空数组，什么都不加
-    
-    const msgs = periodCareMessages[phase];
-    return Array.isArray(msgs) ? msgs : [];
-}
 
 // ===== 初始化监听器 =====
 function initPeriodListeners() {

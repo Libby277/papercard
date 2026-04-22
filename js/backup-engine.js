@@ -186,6 +186,8 @@
         if (!flags.inclAnn) p.push('anniversaries');
         if (!flags.inclThemes) p.push('customThemes', 'themeSchemes');
         if (!flags.inclDg) p.push('dg_custom_data', 'dg_status_pool', 'weekly_fortune', 'daily_fortune', 'customWeather_');
+        p.push('_DO_NOT_MATCH_wishingPoolData'); 
+        p.push('_DO_NOT_MATCH_callBgLibrary');
         return p;
     }
 

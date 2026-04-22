@@ -13,6 +13,7 @@ let _searchQuery = '';
 let _searchDebounceTimer = null;
 let _activeGroupFilter = null; 
 
+
 const GROUP_COLORS = [
     '#FF6B6B','#FF8E53','#FFC542','#51CF66',
     '#20C997','#4DABF7','#748FFC','#DA77F2',
@@ -86,11 +87,14 @@ function _renderListContentOnly() {
         if (currentSubTab === 'statuses') itemsToRender = customStatuses;
         else if (currentSubTab === 'mottos') itemsToRender = customMottos;
         else if (currentSubTab === 'intros') itemsToRender = customIntros;
+        else if (currentSubTab === 'callbg') {itemsToRender = callBgLibrary; renderType = 'callbg'; }
     }
 
     if (renderType === 'emoji') { _renderEmojiTab(list, itemsToRender); return; }
     if (renderType === 'image') { _renderStickerTab(list, itemsToRender); return; }
-    if (renderType === 'period') { _renderPeriodCareTab(list); return; } 
+    //if (renderType === 'period') { _renderPeriodCareTab(list); return; } 
+    if (renderType === 'callbg') {_renderCallBgTab(list);return;}
+
 
     const q = _searchQuery.toLowerCase().trim();
     const filtered = q ? itemsToRender.filter(item => item.toLowerCase().includes(q)) : itemsToRender;
@@ -120,11 +124,11 @@ function renderReplyLibrary() {
     const subTabsContainer = document.getElementById('cr-sub-tabs');
     if (subTabsContainer) {
         subTabsContainer.innerHTML = currentConfig.tabs.map(tab => `
-            <button class="reply-tab-btn ${currentSubTab === tab.id ? 'active' : ''}"
-                    data-id="${tab.id}" data-mode="${tab.mode}">
+            <button class="reply-tab-btn ${currentSubTab === tab.id ? 'active' : ''}" data-id="${tab.id}" data-mode="${tab.mode}">
                 ${tab.name}
             </button>
         `).join('');
+
         subTabsContainer.querySelectorAll('.reply-tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 currentSubTab = btn.dataset.id;
@@ -141,7 +145,6 @@ function renderReplyLibrary() {
 
     list.innerHTML = '';
     list.className = 'content-list-area';
-
     const activeTabConfig = currentConfig.tabs.find(t => t.id === currentSubTab);
     if (activeTabConfig) list.classList.add(activeTabConfig.mode + '-mode');
 
@@ -160,21 +163,26 @@ function renderReplyLibrary() {
             itemsToRender = stickerLibrary;
             renderType = 'image';
         } else if (currentSubTab === 'period') {
-            renderType = 'period'; 
-        }
-        else if (currentSubTab === 'pokes') itemsToRender = customPokes;
+            renderType = 'period';
+        } else if (currentSubTab === 'pokes') {
+            itemsToRender = customPokes;
+        } 
     } else if (currentMajorTab === 'atmosphere') {
         if (currentSubTab === 'statuses') itemsToRender = customStatuses;
         else if (currentSubTab === 'mottos') itemsToRender = customMottos;
         else if (currentSubTab === 'intros') itemsToRender = customIntros;
+        else if (currentSubTab === 'callbg') {itemsToRender = callBgLibrary; renderType = 'callbg'; }
     }
 
+    // ==================== 关键分支：特殊渲染优先 ====================
     if (renderType === 'emoji') { _renderEmojiTab(list, itemsToRender); return; }
     if (renderType === 'image') { _renderStickerTab(list, itemsToRender); return; }
-    if (renderType === 'period') { _renderPeriodCareTab(list); return; }
+   // if (renderType === 'period') { _renderPeriodCareTab(list); return; }
+    if (renderType === 'callbg') { _renderCallBgTab(list); return; }
+    // ==================== 以上全部 return，不会走到下面的通用逻辑 ====================
 
     const q = _searchQuery.toLowerCase().trim();
-    let filtered = q ? itemsToRender.filter(item => item.toLowerCase().includes(q)) : itemsToRender;
+    const filtered = q ? itemsToRender.filter(item => item.toLowerCase().includes(q)) : itemsToRender;
 
     if (filtered.length === 0) {
         list.innerHTML = renderEmptyState(q ? `未找到"${q}"` : '列表空空如也');
@@ -243,6 +251,10 @@ function _renderModernToolbar() {
 
     let batchActionsHtml = '';
     if (_batchModeActive) {
+        // 智能计算当前分组的可见数量
+        let visibleCount = customReplies.length; // 默认全部
+        if (_activeGroupFilter !== null) visibleCount = _activeGroupFilter === 'ungrouped' ? customReplies.filter(t => !customReplyGroups.some(g => (g.items||[]).includes(t))).length : (customReplyGroups.find(g => g.id === _activeGroupFilter)?.items || []).length;
+
         batchActionsHtml = `
             <div id="batch-action-bar" style="
                 display:flex;align-items:center;gap:6px;padding:8px 15px;
@@ -257,7 +269,7 @@ function _renderModernToolbar() {
                     display:flex;align-items:center;gap:5px;
                 ">
                     ${ICONS.check}
-                    ${selectedCount === totalItems ? '取消全选' : `全选 (${totalItems})`}
+                    ${selectedCount === totalItems ? '取消全选' : `全选 (${visibleCount})`}
                 </button>
                 <span style="font-size:12px;color:var(--text-secondary);flex:1;min-width:60px;">
                     ${selectedCount > 0 ? `已选 <strong style="color:var(--text-primary);">${selectedCount}</strong> 条` : '点击字卡以选择'}
@@ -414,11 +426,46 @@ function _renderModernToolbar() {
     });
 
     if (_batchModeActive) {
-        toolbar.querySelector('#batch-select-all-btn')?.addEventListener('click', () => {
+        /*toolbar.querySelector('#batch-select-all-btn')?.addEventListener('click', () => {
             if (_batchSelectedIndices.size === totalItems) _batchSelectedIndices.clear();
             else customReplies.forEach((_, i) => _batchSelectedIndices.add(i));
             renderReplyLibrary();
-        });
+        });*/
+toolbar.querySelector('#batch-select-all-btn')?.addEventListener('click', () => {
+    // 收集当前页面可视区域内的所有字卡文本内容
+    const currentVisibleTexts = new Set();
+    document.querySelectorAll('.rl-card').forEach(card => {
+        // 取卡片里的文字部分，去掉可能的换行符进行精准匹配
+        const textEl = card.querySelector('span');
+        if (textEl) currentVisibleTexts.add(textEl.textContent.trim());
+    });
+
+    // 根据当前看到的文本，去大池子里找出它们对应的真实索引
+    const currentVisibleIndices = new Set();
+    customReplies.forEach((replyText, idx) => {
+        // 兼容带有 | 分隔符的字卡（比如 短字卡|长语录）
+        const mainText = replyText.split('|')[0].trim();
+        if (currentVisibleTexts.has(mainText)) {
+            currentVisibleIndices.add(idx);
+        }
+    });
+
+    // 判断当前这些可见卡片是不是已经被全选了
+    const allVisibleSelected = currentVisibleIndices.size > 0 && 
+                              [...currentVisibleIndices].every(i => _batchSelectedIndices.has(i));
+
+    if (allVisibleSelected) {
+        // 已经全选了，就取消当前分组的选中状态
+        currentVisibleIndices.forEach(i => _batchSelectedIndices.delete(i));
+    } else {
+        // 没全选，就只选中当前分组的
+        currentVisibleIndices.forEach(i => _batchSelectedIndices.add(i));
+    }
+    
+    renderReplyLibrary();
+});
+
+
         toolbar.querySelector('#batch-group-btn')?.addEventListener('click', () => {
             if (_batchSelectedIndices.size === 0) return;
             _showBatchGroupPicker();
@@ -1152,7 +1199,14 @@ function _showGroupEditor(group) {
                 items: initItems
             };
             window.customReplyGroups.push(newGroup);
-            
+            // 如果是从批量分组跳过来的，把选中的字卡塞进这个新分组
+            if (window._pendingBatchGroupItems && window._pendingBatchGroupItems.length > 0) {
+            window._pendingBatchGroupItems.forEach(item => {
+                if (!newGroup.items.includes(item)) newGroup.items.push(item);
+            });
+            window._pendingBatchGroupItems = null; // 用完就清掉
+            }
+
         } else {
             // ✅ 补全：编辑已有分组的逻辑
             group.name = name;
@@ -1261,6 +1315,7 @@ function _showBatchGroupPicker() {
         </div>
         <div style="display:flex;gap:10px;">
             <button id="bgp-cancel" style="flex:1;padding:11px;border:1.5px solid var(--border-color);border-radius:12px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
+            <button id="bgp-new-group" style="flex:1.2;padding:11px;border:1.5px solid var(--accent-color);border-radius:12px;background:transparent;color:var(--accent-color);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-family);display:flex;align-items:center;justify-content:center;gap:4px;">新建分组</button>
             <button id="bgp-save" style="flex:2;padding:11px;border:none;border-radius:12px;background:var(--accent-color);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-family);">确认</button>
         </div>
     `;
@@ -1269,6 +1324,12 @@ function _showBatchGroupPicker() {
 
     panel.querySelector('#bgp-cancel').onclick = () => overlay.remove();
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    panel.querySelector('#bgp-new-group').onclick = () => {
+      overlay.remove();
+      // 把当前选中的字卡存起来，等会儿新建完直接取用
+      window._pendingBatchGroupItems = selectedItems;
+      _showGroupEditor(null);
+    };
     panel.querySelector('#bgp-save').onclick = () => {
         const checked = panel.querySelector('input[name="bgp"]:checked');
         if (!checked) return;
@@ -1349,6 +1410,9 @@ function _showExportUI() {
         { id: '_re_intros',   icon: ICONS.play,      label: '开场动画',  count: customIntros.length,           key: 'customIntros' },
         { id: '_re_emojis',   icon: ICONS.smile,     label: 'Emoji 库',  count: customEmojis.length,           key: 'customEmojis' },
         { id: '_re_groups',   icon: ICONS.folderBig, label: '字卡分组',  count: (customReplyGroups||[]).length, key: 'customReplyGroups', extra: true },
+        { id: '_re_stickers', icon: ICONS.sticker, label: '表情包', count: stickerLibrary.length, key: 'stickerLibrary', isMedia: true },
+        { id: '_re_callbg', icon: ICONS.play, label: '通话背景', count: callBgLibrary.length, key: 'callBgLibrary', isMedia: true },
+       // { id: '_re_period', icon: ICONS.hand, label: '月经关怀文案', count: (periodCareMessages?.approaching?.length||0)+(periodCareMessages?.during?.length||0)+(periodCareMessages?.delayed?.length||0), key: 'periodCareMessages', isMedia: false },
     ];
 
     if (customReplyGroups && customReplyGroups.length > 0) {
@@ -1374,7 +1438,7 @@ function _showExportUI() {
                 ">
                     <div style="width:38px;height:38px;border-radius:10px;background:rgba(var(--accent-color-rgb),0.12);display:flex;align-items:center;justify-content:center;color:var(--accent-color);flex-shrink:0;">${ICONS.export}</div>
                     <div>
-                        <div style="font-size:13px;font-weight:600;color:var(--text-primary);">全量导出</div>
+                        <div style="font-size:13px;font-weight:600;color:var(--text-primary);">选择性导出</div>
                         <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">自由选择要导出的模块</div>
                     </div>
                 </button>
@@ -1385,7 +1449,7 @@ function _showExportUI() {
                 ">
                     <div style="width:38px;height:38px;border-radius:10px;background:rgba(var(--accent-color-rgb),0.12);display:flex;align-items:center;justify-content:center;color:var(--accent-color);flex-shrink:0;">${ICONS.folderBig}</div>
                     <div>
-                        <div style="font-size:13px;font-weight:600;color:var(--text-primary);">按分组导出</div>
+                        <div style="font-size:13px;font-weight:600;color:var(--text-primary);">分组字卡导出</div>
                         <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">仅导出指定分组的字卡内容</div>
                     </div>
                 </button>
@@ -1423,7 +1487,7 @@ function _showExportUI() {
     });
 }
 
-function _doExport(selectedModules) {
+/*function _doExport(selectedModules) {
     const libraryData = { exportDate: new Date().toISOString(), modules: [] };
     selectedModules.forEach(m => {
         if (m.key === 'customReplies')       { libraryData.customReplies = customReplies; libraryData.modules.push('replies'); }
@@ -1437,7 +1501,126 @@ function _doExport(selectedModules) {
     const fileName = `reply-library-${libraryData.modules.join('+')}-${new Date().toISOString().slice(0,10)}.json`;
     exportDataToMobileOrPC(JSON.stringify(libraryData, null, 2), fileName);
     showNotification('✓ 字卡导出成功', 'success');
+}*/
+function _doExport(selectedModules) {
+  // 1. 检查是否选中了包含大文件（表情/背景）的模块
+    const hasMediaModules = selectedModules.some(m => m.isMedia);
+
+    if (hasMediaModules && typeof JSZip !== 'undefined') {
+        // ========== 走 ZIP 独立打包逻辑（防 JSON 撑爆） ==========
+        const zip = new JSZip();
+        const mediaStore = {};
+        const dataPayload = { exportDate: new Date().toISOString(), modules: [] };
+        let mediaCount = 0;
+
+        // 辅助函数：抽离 Base64 媒体
+        const extractMedia = (item) => {
+            if (typeof item === 'string' && item.length > 800 && /^data:(image|video)\//i.test(item)) {
+            const id = 'm' + mediaCount++;
+            mediaStore[id] = item;
+            return { __mRef: id };
+            }
+            return item;
+         };
+
+        selectedModules.forEach(m => {
+            if (m.key === 'stickerLibrary') {
+            dataPayload.stickerLibrary = stickerLibrary.map(extractMedia);
+            dataPayload.modules.push('stickers');
+            } else if (m.key === 'callBgLibrary') {
+            dataPayload.callBgLibrary = callBgLibrary.map(bg => ({ ...bg, src: extractMedia(bg.src) }));
+            dataPayload.modules.push('callbg');
+            }else if (m.key === 'periodCareMessages') {
+                // 导入时，直接把月经文案平铺合并进主字卡池
+                if (data.periodCareMessages) {
+                    const allCareMsgs = [
+                        ...(data.periodCareMessages.approaching || []),
+                        ...(data.periodCareMessages.during || []),
+                        ...(data.periodCareMessages.delayed || [])
+                    ];
+                    let addedCount = 0;
+                    allCareMsgs.forEach(msg => {
+                        // 去重：如果主字卡里已经有了，或者和默认字卡重复了，就不加
+                        const isDuplicate = customReplies.includes(msg) || (typeof CONSTANTS !== 'undefined' && CONSTANTS.REPLY_MESSAGES && CONSTANTS.REPLY_MESSAGES.includes(msg));
+                        if (!isDuplicate) {
+                            customReplies.push(msg);
+                            addedCount++;
+                        }
+                    });
+                    // 把实际增加的数量加到总统计里，让底部的提示准确
+                    totalAdded += addedCount;
+                }
+            } else if (m.key === 'customReplies') {
+            dataPayload.customReplies = customReplies;
+            dataPayload.modules.push('replies');
+            } else if (m.key === 'customPokes') {
+            dataPayload.customPokes = customPokes;
+            dataPayload.modules.push('pokes');
+            } else if (m.key === 'customStatuses') {
+            dataPayload.customStatuses = customStatuses;
+            dataPayload.modules.push('statuses');
+            } else if (m.key === 'customMottos') {
+            dataPayload.customMottos = customMottos;
+            dataPayload.modules.push('mottos');
+            } else if (m.key === 'customIntros') {
+            dataPayload.customIntros = customIntros;
+            dataPayload.modules.push('intros');
+            } else if (m.key === 'customEmojis') {
+            dataPayload.customEmojis = customEmojis;
+            dataPayload.modules.push('emojis');
+            } else if (m.key === 'customReplyGroups') {
+            dataPayload.customReplyGroups = customReplyGroups;
+            dataPayload.modules.push('groups');
+            }
+        });
+
+        // 把图片塞进 ZIP 的 media/ 目录
+        for (const id in mediaStore) {
+            const url = mediaStore[id];
+            const m = /^data:([^,]+),([\s\S]*)$/.exec(url);
+            if (m) {
+                const mime = m[1].split(';')[0];
+                const isB64 = /;base64/i.test(m[1]);
+                let bytes;
+                if (isB64) {
+                    const binary = atob(m[2].replace(/\s/g, ''));
+                    bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                } else {
+                    bytes = new TextEncoder().encode(decodeURIComponent(m[2]));
+                }
+                zip.file('media/' + id, bytes, { binary: true });
+            }
+        }
+
+        zip.file('data.json', '\uFEFF' + JSON.stringify(dataPayload));
+      
+        zip.generateAsync({ type: 'blob', compression: 'DEFLATE' }).then(blob => {
+            const fileName = `library-${dataPayload.modules.join('+')}-${new Date().toISOString().slice(0,10)}.zip`;
+            if (typeof exportDataToMobileOrPC === 'function') exportDataToMobileOrPC(blob, fileName);
+            else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName; a.click(); }
+            showNotification('✓ 已打包为 ZIP 导出（图片安全分离）', 'success');
+        }).catch(() => showNotification('ZIP 打包失败', 'error'));  
+        return;
+    }
+
+  // ========== 原有的纯文本 JSON 导出逻辑（原封不动保留） ==========
+    const libraryData = { exportDate: new Date().toISOString(), modules: [] };
+    selectedModules.forEach(m => {
+        if (m.key === 'customReplies') { libraryData.customReplies = customReplies; libraryData.modules.push('replies'); }
+        else if (m.key === 'customPokes') { libraryData.customPokes = customPokes; libraryData.modules.push('pokes'); }
+        else if (m.key === 'customStatuses') { libraryData.customStatuses = customStatuses; libraryData.modules.push('statuses'); }
+        else if (m.key === 'customMottos') { libraryData.customMottos = customMottos; libraryData.modules.push('mottos'); }
+        else if (m.key === 'customIntros') { libraryData.customIntros = customIntros; libraryData.modules.push('intros'); }
+        else if (m.key === 'customEmojis') { libraryData.customEmojis = customEmojis; libraryData.modules.push('emojis'); }
+        else if (m.key === 'customReplyGroups') { libraryData.customReplyGroups = customReplyGroups; libraryData.modules.push('groups'); }
+       // else if (m.key === 'periodCareMessages') { libraryData.periodCareMessages = periodCareMessages; libraryData.modules.push('period'); }
+    });
+    const fileName = `reply-library-${libraryData.modules.join('+')}-${new Date().toISOString().slice(0,10)}.json`;
+    exportDataToMobileOrPC(JSON.stringify(libraryData, null, 2), fileName);
+    showNotification('✓ 导出成功', 'success');
 }
+
 
 function _showGroupExportPicker() {
     const overlay = _makeOverlay();
@@ -1562,6 +1745,9 @@ function _showImportUI(data) {
         { id: '_ri_intros',   icon: ICONS.play,      label: '开场动画',  data: data.customIntros,      key: 'customIntros' },
         { id: '_ri_emojis',   icon: ICONS.smile,     label: 'Emoji 库',  data: data.customEmojis,      key: 'customEmojis' },
         { id: '_ri_groups',   icon: ICONS.folderBig, label: '字卡分组',  data: data.customReplyGroups, key: 'customReplyGroups', extra: true },
+        { id: '_ri_stickers', icon: ICONS.sticker, label: '表情包', data: data.stickerLibrary, key: 'stickerLibrary' },
+        { id: '_ri_callbg', icon: ICONS.play, label: '通话背景', data: data.callBgLibrary, key: 'callBgLibrary' },
+       // { id: '_ri_period', icon: ICONS.hand, label: '月经关怀文案', data: data.periodCareMessages, key: 'periodCareMessages' },
     ].filter(m => Array.isArray(m.data));
 
     _showIOSheet(`导入字卡`, `文件中包含 ${modules.length} 个模块`, modules, ICONS.import, (selected, mode) => {
@@ -1608,6 +1794,41 @@ function _showImportUI(data) {
                         data.customReplyGroups.forEach(dg => {
                             if (!customReplyGroups.find(g => g.name === dg.name)) customReplyGroups.push(dg);
                         });
+                    } else if (m.key === 'customReplyGroups') {
+                    window.customReplyGroups = data.customReplyGroups;
+                    }
+                    else if (m.key === 'stickerLibrary') {
+                        stickerLibrary = overwrite ? data.stickerLibrary : [...new Set([...stickerLibrary, ...data.stickerLibrary])];
+                        totalAdded += data.stickerLibrary.length;
+                    } else if (m.key === 'callBgLibrary') {
+                        callBgLibrary = overwrite ? data.callBgLibrary : [...callBgLibrary, ...data.callBgLibrary];
+                        totalAdded += data.callBgLibrary.length;
+                    }
+                    // 👇 就是这段！拦截上司送来的小房间数据，强塞大客厅 👇
+                    else if (m.key === 'periodCareMessages') {
+                        const importedCareData = data.periodCareMessages;
+                        if (importedCareData) {
+                            const pHallway = [
+                                ...(importedCareData.approaching || []),
+                                ...(importedCareData.during || []),
+                                ...(importedCareData.delayed || [])
+                            ];
+                            pHallway.forEach(person => {
+                                if (!customReplies.includes(person)) {
+                                    customReplies.push(person);
+                                    totalAdded++;
+                                }
+                            });
+                        }
+                    }
+                    // 👇 新增以下导入逻辑 👇
+                    else if (m.key === 'stickerLibrary') {
+                    stickerLibrary = overwrite ? data.stickerLibrary : [...new Set([...stickerLibrary, ...data.stickerLibrary])];
+                    totalAdded += data.stickerLibrary.length;
+                    } else if (m.key === 'callBgLibrary') {
+                    callBgLibrary = overwrite ? data.callBgLibrary : [...callBgLibrary, ...data.callBgLibrary];
+                    totalAdded += data.callBgLibrary.length;
+                    totalAdded += (data.periodCareMessages?.approaching?.length||0) + (data.periodCareMessages?.during?.length||0) + (data.periodCareMessages?.delayed?.length||0);
                     }
                 });
             }
@@ -1688,8 +1909,8 @@ function _showIOSheet(title, subtitle, modules, icon, onConfirm, showMode = fals
                             <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${m.label}</div>
                             <div style="font-size:11px;color:var(--text-secondary);">${m.data ? m.data.length : m.count} 条${m.extra ? ' · 含分组结构' : ''}</div>
                         </div>
-                        <div class="io-toggle" data-id="${m.id}"><div class="knob"></div></div>
-                        <input type="checkbox" id="${m.id}" checked style="display:none;">
+                        <div class="io-toggle off" data-id="${m.id}"><div class="knob"></div></div>
+                        <input type="checkbox" id="${m.id}" style="display:none;">
                     </div>
                 `).join('')}
             </div>
@@ -1710,24 +1931,25 @@ function _showIOSheet(title, subtitle, modules, icon, onConfirm, showMode = fals
             </div>` : ''}
             <div style="padding:10px 22px 22px;display:flex;gap:10px;flex-shrink:0;">
                 <button id="_io_cancel" style="flex:1;padding:13px;border:1.5px solid var(--border-color);border-radius:14px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
+                <button id="_io_select_all" style="flex:0.8;padding:13px;border:1.5px solid var(--border-color);border-radius:14px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">全选</button>
                 <button id="_io_confirm" style="flex:2;padding:13px;border:none;border-radius:14px;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-family);display:flex;align-items:center;justify-content:center;gap:8px;">
-                    <span style="color:#fff;">${icon}</span> 确认
+                <span style="color:#fff;">${icon}</span> 确认 
                 </button>
             </div>
         </div>
     `;
     document.body.appendChild(overlay);
 
-    overlay.querySelectorAll('.io-toggle').forEach(sw => {
+    /*overlay.querySelectorAll('.io-toggle').forEach(sw => {
         sw.onclick = () => {
             const cb = document.getElementById(sw.dataset.id);
             cb.checked = !cb.checked;
             sw.classList.toggle('off', !cb.checked);
         };
-    });
+    });*/
 
    // const close = () => { overlay.style.animation = 'fadeOut 0.15s ease forwards'; setTimeout(() => overlay.remove(), 150); };
-    const close = () => {
+   /* const close = () => {
         overlay.style.animation = 'fadeOut 0.15s ease forwards';
         setTimeout(() => {
             // ✨ 添加：恢复 body 滚动和移除监听
@@ -1735,7 +1957,60 @@ function _showIOSheet(title, subtitle, modules, icon, onConfirm, showMode = fals
             overlay.removeEventListener('touchmove', preventScroll);
             overlay.remove();
         }, 150);
+    };*/
+   
+  // ===== 统一绑定所有开关和按钮逻辑 =====
+  const selectAllBtn = overlay.querySelector('#_io_select_all');
+  const allToggles = overlay.querySelectorAll('.io-toggle');
+
+  // 1. 每个开关的点击：只管切换自己，然后同步样式
+  allToggles.forEach(sw => {
+    sw.onclick = () => {
+      const cb = document.getElementById(sw.dataset.id);
+      cb.checked = !cb.checked;
+      sw.classList.toggle('off', !cb.checked);
+      _syncSelectAllBtn();
     };
+  });
+
+  // 2. 全选按钮的点击：看是不是已经全选了，是就清空，不是就全选
+  selectAllBtn.onclick = () => {
+    // 检查现在是不是所有都被勾选了
+    const allChecked = [...allToggles].every(sw => document.getElementById(sw.dataset.id).checked);
+    
+    allToggles.forEach(sw => {
+      const cb = document.getElementById(sw.dataset.id);
+      cb.checked = !allChecked; // 如果本来全选了，就全变 false；如果本来没全选，就全变 true
+      sw.classList.toggle('off', !cb.checked);
+    });
+    
+    _syncSelectAllBtn();
+  };
+
+  // 3. 专门同步全选按钮颜色的函数
+  function _syncSelectAllBtn() {
+    const allChecked = [...allToggles].every(sw => document.getElementById(sw.dataset.id).checked);
+    if (allChecked) {
+      selectAllBtn.style.background = 'var(--accent-color)';
+      selectAllBtn.style.color = '#fff';
+      selectAllBtn.style.borderColor = 'var(--accent-color)';
+    } else {
+      selectAllBtn.style.background = 'none';
+      selectAllBtn.style.color = 'var(--text-secondary)';
+      selectAllBtn.style.borderColor = 'var(--border-color)';
+    }
+  }
+
+  // 4. 关闭逻辑
+  const close = () => {
+    overlay.style.animation = 'fadeOut 0.15s ease forwards';
+    setTimeout(() => {
+      document.body.style.overflow = originalOverflow;
+      overlay.removeEventListener('touchmove', preventScroll);
+      overlay.remove();
+    }, 150);
+  };
+     
     overlay.querySelector('#_io_close').onclick = close;
     overlay.querySelector('#_io_cancel').onclick = close;
     overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
@@ -1995,7 +2270,7 @@ function _showBatchAddDialog() {
 
 }
 
-    function initReplyLibraryListeners() {
+function initReplyLibraryListeners() {
     const entryBtn = document.getElementById('custom-replies-function');
     if (entryBtn) {
         entryBtn.addEventListener('click', () => {
@@ -2090,15 +2365,61 @@ function _showBatchAddDialog() {
             if (!file) return;
             e.target.value = '';
             if (file.size > 50 * 1024 * 1024) { showNotification('文件过大', 'error'); return; }
+
+            // 检测是否是刚导出的 ZIP 包
+            const isZip = file.name.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed';
+            if (isZip && typeof JSZip !== 'undefined') {
+                file.arrayBuffer().then(ab => {
+                return JSZip.loadAsync(ab);
+                }).then(zip => {
+                const jsonFile = zip.file('data.json');
+                if (!jsonFile) throw new Error('ZIP 格式错误');
+                return jsonFile.async('string');
+                }).then(async text => {
+                if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+                let data = JSON.parse(text);
+                // 还原被抽离的图片
+                const zip2 = await JSZip.loadAsync(file.arrayBuffer());
+                const inlineMedia = (node) => {
+                    if (node && typeof node === 'object' && !Array.isArray(node) && node.__mRef) {
+                    const mediaFile = zip2.file('media/' + node.__mRef);
+                    if (mediaFile) return mediaFile.async('string'); // 直接返回 base64 字符串
+                    }
+                    return node;
+                };
+                // 因为 async 嵌套太深，这里用简易 Promise 队列还原
+                const restoreArray = async (arr) => {
+                    if (!Array.isArray(arr)) return arr;
+                    const result = [];
+                    for (let item of arr) {
+                    if (item && typeof item === 'object' && item.__mRef) {
+                        const mf = zip2.file('media/' + item.__mRef);
+                        if (mf) {
+                        if (item.src !== undefined) item.src = await mf.async('string'); // 通话背景
+                        else item = await mf.async('string'); // 表情包
+                        }
+                    }
+                    result.push(item);
+                    }
+                    return result;
+                };
+                
+                if (data.stickerLibrary) data.stickerLibrary = await restoreArray(data.stickerLibrary);
+                if (data.callBgLibrary) data.callBgLibrary = await restoreArray(data.callBgLibrary);
+                
+                _showImportUI(data);
+                }).catch(err => {
+                console.error(err);
+                showNotification('ZIP 解析失败', 'error');
+                });
+                return;
+            }
+
+            // 原有的纯文本 JSON 解析逻辑
             const reader = new FileReader();
             reader.onload = ev => {
                 let data;
-                try {
-                    data = _parseFlexibleJSON(ev.target.result);
-                } catch {
-                    showNotification('文件解析失败，请检查文件格式', 'error');
-                    return;
-                }
+                try { data = _parseFlexibleJSON(ev.target.result); } catch { showNotification('文件解析失败，请检查文件格式', 'error'); return; }
                 data = _normalizeImportData(data);
                 _showImportUI(data);
             };
@@ -2107,54 +2428,30 @@ function _showBatchAddDialog() {
         });
     }
 
-    /*const addBtn = document.getElementById('add-custom-reply');
-    if (addBtn) {
-        addBtn.addEventListener('click', () => {
-            if (currentSubTab === 'stickers') {
-                document.getElementById('sticker-file-input')?.click(); return;
-            }
-            if (currentSubTab === 'emojis') {
-                const input = prompt('请输入要添加的 Emoji（支持组合表情）:');
-                if (input?.trim()) {
-                    customEmojis.push(input.trim());
-                    throttledSaveData(); renderReplyLibrary();
-                    showNotification('✓ Emoji 已添加', 'success');
-                }
-                return;
-            }
-            if (currentSubTab === 'custom') {
-                _showBatchAddDialog(); return;
-            }
-            let input;
-            if (currentSubTab === 'intros') {
-                const l1 = prompt('请输入主标题 (如: 𝑳𝒐𝒗𝒆):');
-                if (!l1) return;
-                const l2 = prompt('请输入副标题 (如: 若要由我来谈论爱的话):');
-                input = `${l1}|${l2}`;
-            } else {
-                input = prompt(`请输入新的${getCategoryName(currentSubTab)}:`);
-            }
-            if (input?.trim()) {
-                const val = input.trim();
-                const valNorm = normalizeStringStrict(val);
-                let isDup = false;
-                if (currentSubTab === 'pokes' && customPokes.some(r => normalizeStringStrict(r) === valNorm)) isDup = true;
-                else if (currentSubTab === 'statuses' && customStatuses.some(r => normalizeStringStrict(r) === valNorm)) isDup = true;
-                else if (currentSubTab === 'mottos' && customMottos.some(r => normalizeStringStrict(r) === valNorm)) isDup = true;
-                else if (currentSubTab === 'intros' && customIntros.some(r => normalizeStringStrict(r) === valNorm)) isDup = true;
-                if (isDup) { showNotification('该内容已存在', 'warning'); return; }
-                if (currentSubTab === 'pokes') customPokes.unshift(val);
-                else if (currentSubTab === 'statuses') customStatuses.unshift(val);
-                else if (currentSubTab === 'mottos') customMottos.unshift(val);
-                else if (currentSubTab === 'intros') customIntros.unshift(val);
-                throttledSaveData(); renderReplyLibrary();
-                showNotification('✓ 添加成功', 'success');
-            }
-        });
-    }*/
    const addBtn = document.getElementById('add-custom-reply');
     if (addBtn) {
         addBtn.addEventListener('click', () => {
+            if (currentSubTab === 'callbg') {
+                let cbgInput = document.getElementById('callbg-file-input');
+                if (!cbgInput) {
+                    cbgInput = document.createElement('input');
+                    cbgInput.id = 'callbg-file-input';
+                    cbgInput.type = 'file';
+                    cbgInput.accept = 'image/jpeg,image/png,image/gif,video/mp4,video/webm';
+                    cbgInput.style.display = 'none';
+                    document.body.appendChild(cbgInput);
+                }
+                // 🔥 核心修复：彻底抛弃老的 FileReader，直接用新写的入库函数！
+                cbgInput.onchange = (ev) => {
+                    const file = ev.target.files && ev.target.files[0];
+                    if (file) {
+                        _handleCallBgUpload(file); // 直接走正规军的 IndexedDB 存储逻辑
+                    }
+                    ev.target.value = ''; 
+                };
+                setTimeout(() => { cbgInput.click(); }, 50);
+                return;
+            }
             // 表情库走文件上传
             if (currentSubTab === 'stickers') {
                 document.getElementById('sticker-file-input')?.click();
@@ -2166,100 +2463,6 @@ function _showBatchAddDialog() {
     }
 }
 
-// 添加月经关怀消息
-window.addPeriodCareMsg = function(category) {
-    const catNames = {
-        approaching: '月经临近',
-        during: '月经期间',
-        delayed: '月经推迟'
-    };
-    const catDescs = {
-        approaching: '月经来临前3天发送的消息',
-        during: '月经期间每天发送的消息',
-        delayed: '月经推迟时发送的消息'
-    };
-    const overlay = _makeOverlay();
-    const panel = document.createElement('div');
-    panel.style.cssText = `
-        background:var(--secondary-bg);border-radius:22px;padding:24px;
-        width:92%;max-width:420px;
-        box-shadow:0 24px 80px rgba(0,0,0,.45);
-        animation:popIn 0.22s cubic-bezier(.34,1.56,.64,1);
-    `;
-    panel.innerHTML = `
-        <style>@keyframes popIn { from{opacity:0;transform:scale(.93)} to{opacity:1;transform:scale(1)} }</style>
-        <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px;">批量添加${catNames[category]}消息</div>
-        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6;">${catDescs[category]}，每行一条，自动去重</div>
-        <textarea id="period-batch-input" rows="8" placeholder="在此粘贴内容，每行一条…" style="
-            width:100%;box-sizing:border-box;padding:12px 14px;
-            border:1.5px solid var(--border-color);border-radius:13px;
-            background:var(--primary-bg);color:var(--text-primary);
-            font-size:13px;font-family:var(--font-family);outline:none;resize:vertical;
-            line-height:1.6;transition:border 0.18s;
-        "></textarea>
-        <div style="font-size:11px;color:var(--text-secondary);margin-top:6px;margin-bottom:16px;">
-            <span id="period-batch-count">0 条</span>
-        </div>
-        <div style="display:flex;gap:10px;">
-            <button id="period-ba-cancel" style="flex:1;padding:12px;border:1.5px solid var(--border-color);border-radius:13px;background:none;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">取消</button>
-            <button id="period-ba-confirm" style="flex:2;padding:12px;border:none;border-radius:13px;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font-family);">添加</button>
-        </div>
-    `;
-    overlay.appendChild(panel);
-    document.body.appendChild(overlay);
-
-    const ta = panel.querySelector('#period-batch-input');
-    const countEl = panel.querySelector('#period-batch-count');
-    ta.addEventListener('input', () => {
-        const lines = ta.value.split('\n').filter(l => l.trim());
-        countEl.textContent = `${lines.length} 条`;
-    });
-    ta.addEventListener('focus', e => { e.target.style.borderColor = 'var(--accent-color)'; });
-    ta.addEventListener('blur', e => { e.target.style.borderColor = 'var(--border-color)'; });
-    panel.querySelector('#period-ba-cancel').onclick = () => overlay.remove();
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-
-    panel.querySelector('#period-ba-confirm').onclick = () => {
-        const lines = ta.value.split('\n').map(l => l.trim()).filter(Boolean);
-        if (!lines.length) { showNotification('请输入内容', 'warning'); return; }
-        let added = 0, skipped = 0;
-        const arr = periodCareMessages[category];
-        lines.forEach(val => {
-            if (arr.some(r => normalizeStringStrict(r) === normalizeStringStrict(val))) {
-                skipped++;
-                return;
-            }
-            arr.push(val);
-            added++;
-        });
-        throttledSaveData();
-        overlay.remove();
-        _renderPeriodCareTab(document.getElementById('custom-replies-list'));
-        showNotification(`✓ 添加 ${added} 条${skipped ? `，跳过 ${skipped} 条重复` : ''}`, 'success');
-    };
-};
-
-// 编辑月经关怀消息（保持不变）
-window.editPeriodCareMsg = function(category, index) {
-    const current = periodCareMessages[category][index];
-    const input = prompt('编辑消息：', current);
-    if (input !== null && input.trim()) {
-        periodCareMessages[category][index] = input.trim();
-        throttledSaveData();
-        _renderPeriodCareTab(document.getElementById('custom-replies-list'));
-        showNotification('已保存', 'success');
-    }
-};
-
-// 删除月经关怀消息（保持不变）
-window.deletePeriodCareMsg = function(category, index) {
-    if (confirm('确定删除这条消息吗？')) {
-        periodCareMessages[category].splice(index, 1);
-        throttledSaveData();
-        _renderPeriodCareTab(document.getElementById('custom-replies-list'));
-        showNotification('已删除', 'success');
-    }
-};
 
 function getCategoryName(tabId) {
     return { custom: '回复', pokes: '拍一拍', statuses: '状态', mottos: '格言', intros: '开场语' }[tabId] || '内容';
@@ -2433,163 +2636,356 @@ function applyAllAvatarFrames() {
     }
 }
 
-// ===== 月经关怀板块 =====
-function _renderPeriodCareTab(list) {
-    const categories = [
-        { id: 'approaching', name: '月经临近', icon: '📅', color: '#FF9800', desc: '预期来前1~7天，自动混入聊天和留言' },
-        { id: 'during', name: '月经期间', icon: '🌸', color: '#E91E63', desc: '经期中，自动混入聊天和留言' },
-        { id: 'delayed', name: '月经推迟', icon: '⏰', color: '#9C27B0', desc: '逾期1~7天，自动混入聊天和留言' }
-    ];
+
+// ========== 通话背景渲染 (强制诊断版) ==========
+/*async function _renderCallBgTab(grid) {
+    grid.className = ''; 
+    grid.style.cssText = ''; 
+    grid.innerHTML = ''; 
     
-    list.innerHTML = `
-        <style>
-            .period-care-section {
-                margin-bottom: 16px;
-                background: var(--secondary-bg);
-                border-radius: 16px;
-                border: 1px solid var(--border-color);
-                overflow: hidden;
-            }
-            .period-care-header {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding: 14px 16px;
-                background: linear-gradient(135deg, rgba(var(--accent-color-rgb), 0.08), transparent);
-                border-bottom: 1px solid var(--border-color);
-            }
-            .period-care-icon {
-                width: 36px;
-                height: 36px;
-                border-radius: 12px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 18px;
-            }
-            .period-care-title-wrap {
-                flex: 1;
-            }
-            .period-care-title {
-                font-size: 14px;
-                font-weight: 600;
-                color: var(--text-primary);
-            }
-            .period-care-desc {
-                font-size: 11px;
-                color: var(--text-secondary);
-                margin-top: 2px;
-            }
-            .period-care-count {
-                font-size: 12px;
-                color: var(--text-secondary);
-                background: var(--primary-bg);
-                padding: 4px 10px;
-                border-radius: 20px;
-            }
-            .period-care-list {
-                padding: 8px;
-            }
-            .period-care-item {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding: 10px 12px;
-                border-radius: 10px;
-                margin-bottom: 4px;
-                background: var(--primary-bg);
-                border: 1px solid var(--border-color);
-                transition: all 0.15s;
-            }
-            .period-care-item:hover {
-                border-color: var(--accent-color);
-            }
-            .period-care-text {
-                flex: 1;
-                font-size: 13px;
-                color: var(--text-primary);
-                line-height: 1.4;
-            }
-            .period-care-actions {
-                display: flex;
-                gap: 4px;
-                opacity: 0;
-                transition: opacity 0.15s;
-            }
-            .period-care-item:hover .period-care-actions {
-                opacity: 1;
-            }
-            @media (hover: none) {
-                .period-care-actions { opacity: 1; }
-            }
-            .period-care-btn {
-                width: 28px;
-                height: 28px;
-                border-radius: 8px;
-                border: none;
-                background: transparent;
-                color: var(--text-secondary);
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: all 0.15s;
-                font-size: 12px;
-            }
-            .period-care-btn:hover {
-                background: rgba(var(--accent-color-rgb), 0.1);
-                color: var(--accent-color);
-            }
-            .period-care-btn.delete:hover {
-                background: rgba(244, 67, 54, 0.1);
-                color: #f44336;
-            }
-            .period-care-add {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 6px;
-                padding: 10px;
-                margin: 8px;
-                border-radius: 10px;
-                background: transparent;
-                border: 1.5px dashed var(--border-color);
-                color: var(--text-secondary);
-                font-size: 13px;
-                cursor: pointer;
-                transition: all 0.15s;
-            }
-            .period-care-add:hover {
-                border-color: var(--accent-color);
-                color: var(--accent-color);
-            }
-        </style>
-        
-        ${categories.map(cat => `
-            <div class="period-care-section">
-                <div class="period-care-header">
-                    <div class="period-care-icon" style="background: ${cat.color}20;">${cat.icon}</div>
-                    <div class="period-care-title-wrap">
-                        <div class="period-care-title">${cat.name}</div>
-                        <div class="period-care-desc">${cat.desc}</div>
-                    </div>
-                    <div class="period-care-count">${periodCareMessages[cat.id].length} 条</div>
-                </div>
-                <div class="period-care-list">
-                    ${periodCareMessages[cat.id].map((msg, idx) => `
-                        <div class="period-care-item">
-                            <div class="period-care-text">${msg}</div>
-                            <div class="period-care-actions">
-                                <button class="period-care-btn" onclick="editPeriodCareMsg('${cat.id}', ${idx})" title="编辑">✏️</button>
-                                <button class="period-care-btn delete" onclick="deletePeriodCareMsg('${cat.id}', ${idx})" title="删除">🗑️</button>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                <button class="period-care-add" onclick="addPeriodCareMsg('${cat.id}')">
-                    <i class="fas fa-plus"></i> 添加消息
-                </button>
-            </div>
-        `).join('')}
+    if (!callBgLibrary || callBgLibrary.length === 0) return;
+
+    const scrollBox = document.createElement('div');
+    scrollBox.style.cssText = `
+        display: flex; flex-wrap: wrap; gap: 10px;
+        overflow-y: auto; max-height: 60vh; padding: 4px; align-content: start;
     `;
+
+    for (let index = 0; index < callBgLibrary.length; index++) {
+        const item = callBgLibrary[index];
+        const div = document.createElement('div');
+        
+        div.style.cssText = `
+            width: calc(25% - 8px); aspect-ratio: 3/4; position: relative;
+            border-radius: 8px; overflow: hidden;
+            border: 2px solid ${activeCallBg === item.id ? 'var(--accent-color)' : 'var(--border-color)'};
+            cursor: pointer; transition: all 0.2s; background: var(--secondary-bg);
+        `;
+
+        const mediaEl = document.createElement(item.type === 'video' ? 'video' : 'img');
+        mediaEl.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+
+        // 🔥 1. 强行去数据库拿文件
+        console.log(`[诊断] 准备读取ID: ${item.id}, 类型: ${item.type}`);
+        const file = await new Promise((resolve, reject) => {
+            const tx = CallBgDB.db.transaction(CallBgDB.storeName, 'readonly');
+            const request = tx.objectStore(CallBgDB.storeName).get(item.id);
+            request.onsuccess = () => resolve(request.result ? request.result.file : null);
+            request.onerror = (e) => reject(e.target.error);
+        });
+
+        // 🔥 2. 严苛检查拿到的到底是个啥
+        console.log(`[诊断] 拿到的数据是:`, file);
+        if (!file) {
+            console.error(`[报错] 数据库里 ${item.id} 是个空壳！`);
+            div.innerHTML = '<div style="color:red;padding:5px;font-size:10px;text-align:center;">文件丢失</div>';
+        } else if (!(file instanceof File) && !(file instanceof Blob)) {
+            console.error(`[报错] 拿到的根本不是文件！而是:`, typeof file);
+            div.innerHTML = '<div style="color:red;padding:5px;font-size:10px;text-align:center;">数据类型错误</div>';
+        } else {
+            // 🔥 3. 强行生成预览地址
+            const blobUrl = URL.createObjectURL(file);
+            mediaEl.src = blobUrl;
+            console.log(`[成功] 图片地址生成成功: ${blobUrl.substring(0, 50)}...`);
+        }
+
+        // 视频悬浮播放逻辑
+        if (item.type === 'video' && mediaEl.src) {
+            mediaEl.muted = true; mediaEl.playsInline = true; mediaEl.loop = true;
+            div.onmouseover = () => mediaEl.play().catch(()=>{});
+            div.onmouseout = () => { mediaEl.pause(); mediaEl.currentTime = 0; };
+        }
+
+        // 选中打勾
+        const checkSpan = document.createElement('span');
+        checkSpan.style.cssText = `position:absolute;top:5px;right:5px;width:20px;height:20px;border-radius:50%;background:var(--accent-color);color:#fff;display:${activeCallBg === item.id ? 'flex' : 'none'};align-items:center;justify-content:center;font-size:11px;pointer-events:none;`;
+        checkSpan.textContent = '✓';
+
+        // 删除按钮
+        // 删除按钮 (安全防误触版)
+        const delBtn = document.createElement('button');
+        delBtn.className = 'callbg-del-btn';
+        delBtn.style.cssText = 'position:absolute;bottom:5px;right:5px;width:18px;height:18px;border-radius:5px;background:rgba(0,0,0,0.4);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;z-index:2;backdrop-filter:blur(4px);transition: all 0.2s;';
+        delBtn.textContent = 'x'; 
+        let isConfirming = false; // 记录是否处于“确认删除”状态
+
+
+        div.appendChild(mediaEl);
+        div.appendChild(checkSpan);
+        div.appendChild(delBtn);
+
+        div.addEventListener('mouseover', () => delBtn.style.display = 'flex');
+        div.addEventListener('mouseout', () => delBtn.style.display = 'none');
+
+        div.addEventListener('click', (e) => {
+            if (e.target === delBtn) return;
+            activeCallBg = (activeCallBg === item.id) ? null : item.id;
+            localStorage.setItem('activeCallBg', activeCallBg || '');
+            if (typeof callFeature !== 'undefined' && typeof callFeature.applyBg === 'function') callFeature.applyBg();
+            _renderCallBgTab(grid);
+        });
+
+        delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!confirm('确定删除这个通话背景吗？')) return;
+            const tx = CallBgDB.db.transaction(CallBgDB.storeName, 'readwrite');
+            tx.objectStore(CallBgDB.storeName).delete(item.id);
+            tx.oncomplete = () => {
+                callBgLibrary.splice(index, 1);
+                if (activeCallBg === item.id) {
+                    activeCallBg = null; localStorage.removeItem('activeCallBg');
+                    if (typeof callFeature !== 'undefined' && typeof callFeature.applyBg === 'function') callFeature.applyBg();
+                }
+                if (typeof throttledSaveData === 'function') throttledSaveData(); 
+                _renderCallBgTab(grid);
+            };
+        });
+
+        scrollBox.appendChild(div); 
+    }
+    grid.appendChild(scrollBox);
+}
+
+
+/*async function _handleCallBgUpload(file) {
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+
+    if (!isImage && !isVideo) {
+        if (typeof showNotification === 'function') showNotification('仅支持图片或视频格式', 'error');
+        return;
+    }
+
+    // 限制 50MB
+    if (file.size > 50 * 1024 * 1024) {
+        if (typeof showNotification === 'function') showNotification('文件过大，建议 50MB 以下', 'error');
+        return;
+    }
+
+    if (typeof showNotification === 'function') showNotification('正在保存...', 'info');
+
+    const id = 'cbg_' + Date.now() + Math.random().toString(36).substr(2, 4);
+    const type = isImage ? 'image' : 'video';
+
+    if (isVideo) {
+        // 视频需要先检查时长
+        const tempVideo = document.createElement('video');
+        tempVideo.preload = 'metadata';
+        tempVideo.onloadedmetadata = () => {
+            if (tempVideo.duration > 120) {
+                if (typeof showNotification === 'function') showNotification('视频时长不能超过 120 秒', 'error');
+                URL.revokeObjectURL(tempVideo.src);
+                return;
+            }
+            URL.revokeObjectURL(tempVideo.src);
+            doSave(id, file, type);
+        };
+        tempVideo.onerror = () => {
+            if (typeof showNotification === 'function') showNotification('视频编码不兼容', 'error');
+            URL.revokeObjectURL(tempVideo.src);
+        };
+        tempVideo.src = URL.createObjectURL(file);
+    } else {
+        doSave(id, file, type);
+    }
+
+    // 🔥 核心：直接存原始的 file 对象，绝不转 Base64！
+    function doSave(id, file, type) {
+        try {
+            const tx = CallBgDB.db.transaction(CallBgDB.storeName, 'readwrite');
+            tx.objectStore(CallBgDB.storeName).put({ id, file });
+            
+            tx.oncomplete = () => {
+                if (!callBgLibrary) callBgLibrary = [];
+                callBgLibrary.push({ id, type }); 
+                
+                activeCallBg = id;
+                localStorage.setItem('activeCallBg', activeCallBg);
+                if (typeof throttledSaveData === 'function') throttledSaveData(); 
+                
+                // 刷新列表
+                const listContainer = document.getElementById('custom-replies-list');
+                if (listContainer) _renderCallBgTab(listContainer);
+                
+                if (typeof showNotification === 'function') showNotification('背景添加成功', 'success');
+                if (typeof callFeature !== 'undefined' && typeof callFeature.applyBg === 'function') callFeature.applyBg();
+            };
+            
+            tx.onerror = () => {
+                if (typeof showNotification === 'function') showNotification('数据库写入失败', 'error');
+            };
+        } catch (err) {
+            console.error('保存失败:', err);
+        }
+    }
+}*/
+function _renderCallBgTab(grid) {
+  grid.className = '';
+  grid.style.cssText = '';
+  grid.innerHTML = '';
+  
+  if (!callBgLibrary || callBgLibrary.length === 0) return;
+  
+  const scrollBox = document.createElement('div');
+  scrollBox.style.cssText = `
+    display: flex; flex-wrap: wrap; gap: 10px; overflow-y: auto;
+    max-height: 60vh; padding: 4px; align-content: start;
+  `;
+
+  for (let index = 0; index < callBgLibrary.length; index++) {
+    const item = callBgLibrary[index];
+    const div = document.createElement('div');
+    div.style.cssText = `
+      width: calc(25% - 8px); aspect-ratio: 3/4; position: relative;
+      border-radius: 8px; overflow: hidden;
+      border: 2px solid ${activeCallBg === item.id ? 'var(--accent-color)' : 'var(--border-color)'};
+      cursor: pointer; transition: all 0.2s; background: var(--secondary-bg);
+    `;
+
+    const mediaEl = document.createElement(item.type === 'video' ? 'video' : 'img');
+    mediaEl.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+    
+    // 🔥 判断拿到的到底是原生 File 还是旧版的 Base64
+    if (item.file instanceof File || item.file instanceof Blob) {
+      mediaEl.src = URL.createObjectURL(item.file);
+    } else if (typeof item.src === 'string') {
+      mediaEl.src = item.src; // 兼容一下旧数据
+    } else {
+      div.innerHTML = '<div style="color:red;padding:5px;font-size:10px;text-align:center;">数据丢失</div>';
+    }
+
+    if (item.type === 'video' && mediaEl.src) {
+      mediaEl.muted = true; mediaEl.playsInline = true; mediaEl.loop = true;
+      div.onmouseover = () => mediaEl.play().catch(()=>{});
+      div.onmouseout = () => { mediaEl.pause(); mediaEl.currentTime = 0; };
+    }
+
+    const checkSpan = document.createElement('span');
+    checkSpan.style.cssText = `position:absolute;top:5px;right:5px;width:20px;height:20px;border-radius:50%;background:var(--accent-color);color:#fff;display:${activeCallBg === item.id ? 'flex' : 'none'};align-items:center;justify-content:center;font-size:11px;pointer-events:none;`;
+    checkSpan.textContent = '✓';
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'callbg-del-btn';
+    // 👇 修改点：去掉了 display:none，改成了 flex 始终可见，加深了背景和加了阴影
+    delBtn.style.cssText = 'position:absolute;bottom:5px;right:5px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.55);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;z-index:2;backdrop-filter:blur(6px);box-shadow:0 2px 6px rgba(0,0,0,0.3);transition: all 0.2s;';
+    delBtn.textContent = '✕';
+
+    div.appendChild(mediaEl);
+    div.appendChild(checkSpan);
+    div.appendChild(delBtn);
+    
+    // 👇 修改点：删掉了控制显隐的 mouseover/mouseout 事件
+    // 如果你想保留鼠标放上去变红的效果，可以加上下面这句 hover 反馈：
+    delBtn.addEventListener('mouseenter', () => {
+      delBtn.style.background = 'rgba(239, 68, 68, 0.85)';
+      delBtn.style.transform = 'scale(1.15)';
+    });
+    delBtn.addEventListener('mouseleave', () => {
+      delBtn.style.background = 'rgba(0,0,0,0.55)';
+      delBtn.style.transform = 'scale(1)';
+    });
+
+    div.addEventListener('click', (e) => {
+      if (e.target === delBtn) return;
+      activeCallBg = (activeCallBg === item.id) ? null : item.id;
+      localStorage.setItem('activeCallBg', activeCallBg || '');
+      if (typeof callFeature !== 'undefined' && typeof callFeature.applyBg === 'function') callFeature.applyBg();
+      _renderCallBgTab(grid);
+    });
+    
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!confirm('确定删除这个通话背景吗？')) return;
+      
+      // 从数组删掉
+      callBgLibrary.splice(index, 1);
+      if (activeCallBg === item.id) {
+        activeCallBg = null;
+        localStorage.removeItem('activeCallBg');
+        if (typeof callFeature !== 'undefined' && typeof callFeature.applyBg === 'function') callFeature.applyBg();
+      }
+      
+      // 🔥 单独保存这个大数组，不走 throttledSaveData 的 JSON 化
+      if (typeof APP_PREFIX !== 'undefined' && typeof localforage !== 'undefined') {
+        localforage.setItem(APP_PREFIX + 'callBgLibrary', callBgLibrary).catch(()=>{});
+      }
+      
+      _renderCallBgTab(grid);
+    });
+
+    scrollBox.appendChild(div);
+  }
+  grid.appendChild(scrollBox);
+}
+
+async function _handleCallBgUpload(file) {
+  const isImage = file.type.startsWith('image/');
+  const isVideo = file.type.startsWith('video/');
+  if (!isImage && !isVideo) {
+    if (typeof showNotification === 'function') showNotification('仅支持图片或视频格式', 'error');
+    return;
+  }
+
+  if (file.size > 50 * 1024 * 1024) {
+    if (typeof showNotification === 'function') showNotification('文件过大，建议 50MB 以下', 'error');
+    return;
+  }
+
+  if (typeof showNotification === 'function') showNotification('正在保存...', 'info');
+
+  const type = isImage ? 'image' : 'video';
+
+  // 视频检查时长
+  if (isVideo) {
+    const tempVideo = document.createElement('video');
+    tempVideo.preload = 'metadata';
+    tempVideo.onloadedmetadata = () => {
+      if (tempVideo.duration > 120) {
+        if (typeof showNotification === 'function') showNotification('视频时长不能超过 120 秒', 'error');
+        URL.revokeObjectURL(tempVideo.src);
+        return;
+      }
+      URL.revokeObjectURL(tempVideo.src);
+      doSave(file, type);
+    };
+    tempVideo.onerror = () => {
+      if (typeof showNotification === 'function') showNotification('视频编码不兼容', 'error');
+      URL.revokeObjectURL(tempVideo.src);
+    };
+    tempVideo.src = URL.createObjectURL(file);
+  } else {
+    doSave(file, type);
+  }
+
+  // 🔥 核心：直接把原生 file 对象存进数组，不转 Base64
+  function doSave(file, type) {
+    const id = 'cbg_' + Date.now() + Math.random().toString(36).substr(2, 4);
+    
+    if (!callBgLibrary) callBgLibrary = [];
+    
+    // 把 file 对象直接塞进数组
+    callBgLibrary.push({
+      id: id,
+      type: type,
+      file: file // 👈 关键：存原生 File
+    });
+    
+    activeCallBg = id;
+    localStorage.setItem('activeCallBg', activeCallBg);
+    
+    // 因为存的是二进制对象，不能走普通的 JSON 序列化
+    // 直接调用 localforage 统一存入 CHAT_APP_V3_callBgLibrary
+    if (typeof APP_PREFIX !== 'undefined' && typeof localforage !== 'undefined') {
+      localforage.setItem(APP_PREFIX + 'callBgLibrary', callBgLibrary).then(() => {
+        if (typeof showNotification === 'function') showNotification('背景添加成功', 'success');
+        
+        const listContainer = document.getElementById('custom-replies-list');
+        if (listContainer) _renderCallBgTab(listContainer);
+        if (typeof callFeature !== 'undefined' && typeof callFeature.applyBg === 'function') callFeature.applyBg();
+      }).catch(err => {
+        console.error('通话背景保存失败:', err);
+        if (typeof showNotification === 'function') showNotification('保存失败，空间不足？', 'error');
+      });
+    }
+  }
 }

@@ -35,14 +35,14 @@
             // --- 功能数据 ---
             { id: 'anniversaries', name: '纪念日/倒计时', icon: 'fa-calendar-heart', backup: true },
             { id: 'calendarEvents', name: '心情与日程', icon: 'fa-calendar-alt', backup: true },
-            { id: 'periodCareMessages', name: '月经关怀', icon: 'fa-heartbeat', backup: true },
+           // { id: 'periodCareMessages', name: '月经关怀', icon: 'fa-heartbeat', backup: true },
             { id: 'partnerPersonas', name: '群聊成员', icon: 'fa-users', backup: true },
             
             // --- 新增功能 (根据你的 HTML 补充) ---
             // 假设信封数据变量名为 envelopeData (如果不对应请修改 id)
             { id: 'envelopeData', name: '留言板', icon: 'fa-envelope-open-text', backup: true },
             // 假设心情手账变量名为 moodDiaryData
-            { id: 'moodDiaryData', name: '心晴手账', icon: 'fa-cloud-sun', backup: true },
+            { id: 'moodDiaryData', name: '心晴与日程', icon: 'fa-cloud-sun', backup: true },
             // 假设占卜记录变量名为 divinationHistory
             { id: 'divinationHistory', name: '占卜记录', icon: 'fa-moon', backup: true },
 

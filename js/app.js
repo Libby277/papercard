@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 👇 先初始化 SESSION_ID，再执行其他模块
         await safeAwait(initializeSession());
 
-        safeAwait(Promise.all([
+        await safeAwait(Promise.all([
         setupEventListeners?.(),
         initThemeEditor?.(),
         // initAnniversaryModule?.(),  ← 删掉这行，setupEventListeners 里面已经调过了
@@ -269,56 +269,10 @@ const stickerInput = document.getElementById('sticker-file-input');
                     e.target.value = '';
                 });
             }
-//const myStickerQuickUpload = document.getElementById('my-sticker-quick-upload');
-/*if (myStickerQuickUpload) {
-    myStickerQuickUpload.addEventListener('change', async (e) => {
-        const files = Array.from(e.target.files);
-        if (!files.length) return;
-        const oversized = files.filter(f => f.size > 2 * 1024 * 1024);
-        if (oversized.length > 0) showNotification(oversized.length + ' 张图片超过 2MB，已跳过', 'warning');
-        const validFiles = files.filter(f => f.size <= 2 * 1024 * 1024);
-        if (!validFiles.length) return;
-        showNotification('正在处理 ' + validFiles.length + ' 张...', 'info');
-        let ok = 0, fail = 0;
-        for (const file of validFiles) {
-            try {
-                const base64 = await optimizeImage(file, 300, 0.8);
-                myStickerLibrary.push(base64);
-                ok++;
-            } catch(err) { fail++; }
-        }
-        throttledSaveData();
-        if (typeof renderComboContent === 'function') renderComboContent('my-sticker');
-        showNotification(fail > 0 ? `上传完成：${ok} 成功 ${fail} 失败` : `✓ 已添加 ${ok} 张到我的表情库`, fail > 0 ? 'warning' : 'success');
-        e.target.value = '';
-    });
-}*/
 
 window.addEventListener('load', function() {
     setTimeout(function() {
-        try {
-            /*if (localStorage.getItem('dailyGreetingShown') === new Date().toDateString()) return;
-            try { if (typeof checkPartnerDailyMood === 'function') checkPartnerDailyMood(); } catch(e2) { console.warn('checkPartnerDailyMood error:', e2); }
-            if (typeof _buildDailyGreeting === 'function') _buildDailyGreeting();
-            if (window.localforage && window.APP_PREFIX) {
-                localforage.getItem(window.APP_PREFIX + 'tour_seen').then(function(seen) {
-                    if (seen) {
-                        var modal = document.getElementById('daily-greeting-modal');
-                        if (modal) modal.classList.remove('hidden');
-                        localStorage.setItem('dailyGreetingShown', new Date().toDateString());
-                    }
-                }).catch(function() {
-                    var modal = document.getElementById('daily-greeting-modal');
-                    if (modal) modal.classList.remove('hidden');
-                    localStorage.setItem('dailyGreetingShown', new Date().toDateString());
-                });
-            } else {
-                var modal = document.getElementById('daily-greeting-modal');
-                if (modal) modal.classList.remove('hidden');
-                localStorage.setItem('dailyGreetingShown', new Date().toDateString());
-            }
-                */
-        
+        try {       
             if (localStorage.getItem('dailyGreetingShown') === new Date().toDateString()) return;
             try {
                 if (typeof checkPartnerDailyMood === 'function') checkPartnerDailyMood();

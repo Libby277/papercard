@@ -11,7 +11,7 @@
     const KEY_POS      = 'callWindowPos';
     const KEY_SIZE     = 'callWindowSize';
     const KEY_PILL_POS = 'callPillPos';
-    const BG_LF_KEY    = 'callBgImageData';
+    //const BG_LF_KEY    = 'callBgImageData';
     const KEY_REJECT_ENABLED = 'callRejectEnabled';
 
 
@@ -24,7 +24,7 @@
         timerRAF:        null,
         minimized:       false,
         immersive:       false,
-        bgImage:         null,
+        //bgImage:         null,
         pos:             JSON.parse(localStorage.getItem(KEY_POS)  || 'null'),
         pillPos:         JSON.parse(localStorage.getItem(KEY_PILL_POS) || 'null'),
         size:            JSON.parse(localStorage.getItem(KEY_SIZE) || '{"w":280,"h":440}'),
@@ -40,15 +40,8 @@
 
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-    /* ── BG ─────────────────────────────────────────────────── */
-    function loadBg() {
-        if (!window.localforage) return;
-        localforage.getItem(BG_LF_KEY).then(v => { if (v) { S.bgImage = v; applyBg(); } }).catch(() => {});
-    }
-    function saveBg(d) {
-        if (!d || !window.localforage) return;
-        localforage.setItem(BG_LF_KEY, d).catch(() => {});
-    }
+
+
 
     /* ── SVG hangup ─────────────────────────────────────────── */
     const SVG_HU = `<svg viewBox="0 0 24 24" fill="none" style="display:block;width:100%;height:100%;">
@@ -452,6 +445,7 @@ html:not([data-theme="dark"])[data-color-theme="black-white"] .message-sent{
       <div class="call-orb call-orb-2"></div>
       <div class="call-orb call-orb-3"></div>
       <img id="call-bg-img" src="" alt="">
+      <video id="call-bg-video" autoplay muted loop playsinline></video>
     </div>
     <div class="call-overlay"></div>
 
@@ -490,8 +484,8 @@ html:not([data-theme="dark"])[data-color-theme="black-white"] .message-sent{
     </div>
 
     <button class="call-util-btn" id="call-immersive-btn" title="沉浸模式"><i class="fas fa-eye-slash"></i></button>
-    <button class="call-util-btn" id="call-bg-btn" title="更换背景"><i class="fas fa-image"></i></button>
-    <input type="file" id="call-bg-file-input" accept="image/*,.gif">
+    <!--<button class="call-util-btn" id="call-bg-btn" title="更换背景"><i class="fas fa-image"></i></button>
+    <input type="file" id="call-bg-file-input" accept="image/*,.gif">-->
 
     <div id="call-window-controls">
       <button class="call-hangup-btn" id="call-hangup-btn">${SVG_HU}</button>
@@ -623,11 +617,33 @@ html:not([data-theme="dark"])[data-color-theme="black-white"] .message-sent{
     }
 
     function applyBg() {
-        const img = document.getElementById('call-bg-img');
-        if (!img) return;
-        if (S.bgImage) { img.src = S.bgImage; img.style.display = 'block'; }
-        else { img.src = ''; img.style.display = 'none'; }
+        const imgEl = document.getElementById('call-bg-img');
+        const vidEl = document.getElementById('call-bg-video');
+        if (imgEl) { imgEl.style.display = 'none'; imgEl.removeAttribute('src'); }
+        if (vidEl) { vidEl.pause(); vidEl.removeAttribute('src'); vidEl.load(); }
+
+        if (!callBgLibrary || !activeCallBg) return;
+        
+        const item = callBgLibrary.find(i => i.id === activeCallBg);
+        if (!item) return;
+
+        // 🔥 从数组里直接拿 File 对象生成临时链接
+        let blobUrl = null;
+        if (item.file instanceof File || item.file instanceof Blob) {
+            blobUrl = URL.createObjectURL(item.file);
+        } else if (typeof item.src === 'string') {
+            blobUrl = item.src; // 兼容旧数据
+        }
+
+        if (!blobUrl) return;
+
+        if (item.type === 'video') {
+            if (vidEl) { vidEl.src = blobUrl; vidEl.play().catch(()=>{}); }
+        } else {
+            if (imgEl) { imgEl.src = blobUrl; imgEl.style.display = 'block'; }
+        }
     }
+
 
     function positionWindow() {
         const win = document.getElementById('call-window');
@@ -817,6 +833,8 @@ function startCall(isPartner) {
         const conn = document.getElementById('call-connecting-state');
         if (body) body.style.display = '';
         if (conn) conn.classList.remove('visible');
+        const vid = document.getElementById('call-bg-video');
+        if (vid) { vid.pause(); vid.removeAttribute('src'); vid.load(); }
         S.immersive = false;
         const iBtn = document.getElementById('call-immersive-btn');
         if (iBtn) { iBtn.classList.remove('active'); iBtn.querySelector('i').className = 'fas fa-eye-slash'; }
@@ -858,6 +876,7 @@ function startCall(isPartner) {
             saved.minimized = true;
             localStorage.setItem('callActiveState', JSON.stringify(saved));
         } catch(e) {}
+        document.getElementById('call-bg-video')?.pause();
         document.getElementById('call-window')?.classList.remove('visible');
         const pill = document.getElementById('call-mini-pill');
         if (pill) { pill.classList.add('visible'); positionPill(); }
@@ -872,6 +891,8 @@ function startCall(isPartner) {
         } catch(e) {}
         const win = document.getElementById('call-window');
         if (win) { positionWindow(); win.classList.add('visible'); }
+        const vid = document.getElementById('call-bg-video');
+        if (vid && vid.src && !S.immersive) vid.play().catch(()=>{});
         document.getElementById('call-mini-pill')?.classList.remove('visible');
     }
 
@@ -1040,16 +1061,7 @@ function startCall(isPartner) {
                 document.getElementById('call-size-presets')?.classList.remove('open');
         });
 
-        // BG upload (no size limit)
-        document.getElementById('call-bg-btn')?.addEventListener('click', () => document.getElementById('call-bg-file-input')?.click());
-        document.getElementById('call-bg-file-input')?.addEventListener('change', e => {
-            const f = e.target.files?.[0]; if (!f) return;
-            const r = new FileReader();
-            r.onload = ev => { S.bgImage = ev.target.result; saveBg(S.bgImage); applyBg(); showNotification?.('通话背景已更新 ✓','success',2000); };
-            r.readAsDataURL(f); e.target.value = '';
-        });
-
-        // Call feature toggle (delegated, works for both old dm-card and new dm2-card)
+          // Call feature toggle (delegated, works for both old dm-card and new dm2-card)
         document.addEventListener('change', e => {
             if (e.target.id === 'call-enabled-toggle') {
                 S.enabled = e.target.checked;
@@ -1070,15 +1082,14 @@ function startCall(isPartner) {
     }
 
     /* ── Public ───────────────────────────────────────────── */
-    window.callFeature = { startCall, endCall, showIncomingCall, restoreWindow, minimizeWindow };
+    window.callFeature = { startCall, endCall, showIncomingCall, restoreWindow, minimizeWindow,applyBg };
 
     /* ── Init ─────────────────────────────────────────────── */
     function init() {
         injectCSS();
         injectHTML();
         bindEvents();
-        loadBg();
-
+        // loadBg();
         const late = () => {
             injectToolbarBtn();
             if (S.enabled) scheduleRandomCall();

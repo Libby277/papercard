@@ -256,7 +256,7 @@ const applyBackground = (value, mode = 'contain') => {
 };
 
 
-const loadData = async () => {
+async function loadData() {
     try {
         settings = getDefaultSettings();
         
@@ -282,7 +282,8 @@ const loadData = async () => {
             localforage.getItem(getStorageKey('customReplyGroups')),
             localforage.getItem(getStorageKey('periodCareMessages')),
             localforage.getItem(getStorageKey('calendarEvents')),
-            localforage.getItem(getStorageKey('wishingPoolData')),
+            localforage.getItem(getStorageKey('wishingPoolData')), 
+            localforage.getItem(getStorageKey('callBgLibrary')),
         ]);
         const getVal = (index) => results[index].status === 'fulfilled' ? results[index].value : null;
 
@@ -308,19 +309,56 @@ const loadData = async () => {
         const savedPeriodCare = getVal(19); 
         const savedCalendarEvents = getVal(20);
         const savedWishingPool = getVal(21);
+        const savedCallBgLibrary = getVal(22);
 
+        if (savedCallBgLibrary && Array.isArray(savedCallBgLibrary)) {
+        // 🔥 终极防线：强制过滤掉所有非 cbg_ 开头的脏数据
+        // 彻底解决旧备份把“许愿池”等数据混入通话背景的问题
+        callBgLibrary = savedCallBgLibrary.filter(item => 
+            item && typeof item.id === 'string' && item.id.startsWith('cbg_')
+        );
+        
+        // 如果过滤后数据变了，说明确实有脏数据被清理了，顺手存一下干净的
+        if (callBgLibrary.length !== savedCallBgLibrary.length) {
+            console.warn(`[callBg] 拦截并清理了 ${savedCallBgLibrary.length - callBgLibrary.length} 条脏数据`);
+            try { localforage.setItem(getStorageKey('callBgLibrary'), callBgLibrary); } catch(e) {}
+        }
+        }
+
+
+        // 加载通话背景选中状态
+       // activeCallBg = localStorage.getItem('activeCallBg') || null;
 
         if (savedWishingPool) wishingPoolData = savedWishingPool;
         if (savedCalendarEvents) calendarEvents = savedCalendarEvents;
-        // 处理月经关怀消息
-        if (savedPeriodCare) periodCareMessages = savedPeriodCare;
+        // 1. 无论小房间有没有人，大客厅必须先用硬盘里的原住民（308条）垫底！
+        if (savedCustomReplies && Array.isArray(savedCustomReplies)) {
+            customReplies = savedCustomReplies;
+        } else {
+            customReplies = [];
+        }
+
+        // 2. 处理小房间迁入（基于绝对安全的 308 条基础之上）
+        periodCareMessages = savedPeriodCare; 
+        if (periodCareMessages) {
+            const people = [
+                ...(periodCareMessages.approaching || []),
+                ...(periodCareMessages.during || []),
+                ...(periodCareMessages.delayed || [])
+            ];
+            if (people.length > 0) {
+                // 往安全的 308 条基础上追加，去重
+                people.forEach(p => { if (!customReplies.includes(p)) customReplies.push(p); });
+                console.log('✅ 迁移完成，当前总字卡数: ' + customReplies.length);
+            }
+        }
+
         if (savedPartnerPersonas) partnerPersonas = savedPartnerPersonas; 
 
         if (savedShowNameConfig !== null) {
             showPartnerNameInChat = savedShowNameConfig;
             document.body.classList.toggle('show-partner-name', showPartnerNameInChat);
         }
-
         // 检查消息数据完整性
         if (savedMessages && Array.isArray(savedMessages)) {
             // 检查每条消息是否有必要字段
@@ -354,11 +392,6 @@ const loadData = async () => {
             showPartnerNameInChat = settings.showPartnerNameInChat;
             document.body.classList.toggle('show-partner-name', showPartnerNameInChat);
         }
-       /* try {
-            if (settings.customFontUrl) applyCustomFont(settings.customFontUrl);
-            if (settings.customBubbleCss) applyCustomBubbleCss(settings.customBubbleCss);
-            if (settings.customGlobalCss) applyGlobalThemeCss(settings.customGlobalCss);
-        } catch(e) { console.warn("样式应用失败", e); }*/
         try {
             if (settings.useLocalFont || (settings.customFontUrl && settings.customFontUrl.trim())) {
                 applyCurrentFont().catch(err => console.warn("字体加载失败", err));
@@ -415,8 +448,8 @@ const loadData = async () => {
         } else {
             savedBackgrounds = [{ id: 'preset-1', type: 'color', value: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' }];
         }
-
-        if (savedCustomReplies) customReplies = savedCustomReplies;
+       // if (Array.isArray(savedCallBgLibrary)) callBgLibrary = savedCallBgLibrary;
+       // if (savedCustomReplies) customReplies = savedCustomReplies;
         if (savedReplyGroups) window.customReplyGroups = savedReplyGroups;
         if (savedAnniversaries) anniversaries = savedAnniversaries;
         if (savedStickers) stickerLibrary = savedStickers;
@@ -451,8 +484,13 @@ const loadData = async () => {
         try { await initMoodData(); } catch(e) { console.warn("心情数据加载失败", e); }
         try { await loadEnvelopeData(); } catch(e) { console.warn("留言板数据加载失败", e); }
         // 在 loadData() 函数中添加
-        try { await initPeriodData(); } catch(e) { console.warn("月经数据加载失败", e); }
-
+        //try { await initPeriodData(); } catch(e) { console.warn("月经数据加载失败", e); }
+        // 在 loadData() 函数中添加
+        try {
+            await initPeriodData();
+        } catch(e) {
+            console.warn("月经数据加载失败", e);
+        }
 
         displayedMessageCount = HISTORY_BATCH_SIZE;
         
@@ -479,7 +517,7 @@ const LIBRARY_CONFIG = {
             { id: 'custom', name: '主字卡', mode: 'list' },
             { id: 'emojis', name: 'Emoji', mode: 'grid' },
             { id: 'stickers', name: '表情库', mode: 'grid' },
-            { id: 'period', name: '月经关怀', mode: 'list' },
+           // { id: 'period', name: '月经关怀', mode: 'list' },
             { id: 'pokes', name: '拍一拍', mode: 'list' },
         ]
     },
@@ -488,7 +526,8 @@ const LIBRARY_CONFIG = {
         tabs: [   
             { id: 'statuses', name: '对方状态', mode: 'list' },
             { id: 'mottos', name: '顶部格言', mode: 'list' },
-            { id: 'intros', name: '开场动画', mode: 'list' }
+            { id: 'intros', name: '开场动画', mode: 'list' },
+            { id: 'callbg', name: '通话背景', mode: 'grid' }
         ]
     }
 };
@@ -592,7 +631,7 @@ function _tryRecoverFromBackup() {
 
 // core.js 中修改原来的 saveData 函数
 
-const saveData = async () => {
+async function saveData() {
   if (!SESSION_ID) {
     console.warn('[saveData] SESSION_ID 尚未初始化，跳过保存');
     return;
@@ -614,10 +653,11 @@ const saveData = async () => {
     { key: 'customThemes', val: () => localforage.setItem(`${APP_PREFIX}customThemes`, customThemes) },
     { key: 'themeSchemes', val: () => localforage.setItem(`${APP_PREFIX}themeSchemes`, themeSchemes) },
     { key: 'chatMessages', val: () => localforage.setItem(getStorageKey('chatMessages'), messages) },
-    { key: 'periodCareMessages', val: () => localforage.setItem(getStorageKey('periodCareMessages'), periodCareMessages) },
+    //{ key: 'periodCareMessages', val: () => localforage.setItem(getStorageKey('periodCareMessages'), periodCareMessages) },
     { key: 'calendarEvents', val: () => localforage.setItem(getStorageKey('calendarEvents'), calendarEvents) },
     { key: 'moodData', val: () => localforage.setItem(getStorageKey('moodData'), window.moodData) },
     { key: 'wishingPoolData', val: () => localforage.setItem(getStorageKey('wishingPoolData'), wishingPoolData) },
+    { key: 'callBgLibrary', val: () => localforage.setItem(getStorageKey('callBgLibrary'), callBgLibrary) },
   ];
 
   const partnerAvatarSrc = (() => {
@@ -1375,17 +1415,6 @@ function manageAutoSendTimer() {
             }
         };
 
-
-        /*const addMessage = (message) => {
-            if (!(message.timestamp instanceof Date)) message.timestamp = new Date(message.timestamp);
-            messages.push(message);
-            displayedMessageCount++;
-            const container = DOMElements.chatContainer;
-            container.style.opacity = '1';
-            renderMessages(false);
-            //throttledSaveData();
-            immediateSaveData(); 
-        };*/
         const addMessage = (message) => {
             if (!(message.timestamp instanceof Date)) message.timestamp = new Date(message.timestamp);
             messages.push(message);
@@ -1408,8 +1437,6 @@ function manageAutoSendTimer() {
                 // 旧浏览器降级方案
                 setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
             }
-
-            //throttledSaveData();
             immediateSaveData();
         };
         window.addMessage = addMessage;
@@ -1473,147 +1500,6 @@ function manageAutoSendTimer() {
                 </div>`;
         };
         function updateReplyPreview() { window.updateReplyPreview(); }
-
-        /*function sendMessage(textOverride = null, type = 'normal', imageBase64 = null) {
-            const text = textOverride || DOMElements.messageInput.value.trim();
-            const imageFile = DOMElements.imageInput.files[0];
-            if (!text && !imageFile && !imageBase64 && type === 'normal') return;
-            // 🌟 键盘保活模式：静默清空，绝对不触发 blur
-            // 🔥 核心改动：完全以标记为准，不再跟其他设置耦合
-            if (DOMElements.messageInput.dataset.keepFocus === '1') {
-                // 用户主动开启了保活：静默清空，绝对不触发 blur
-                DOMElements.messageInput.value = '';
-                DOMElements.messageInput.style.height = '46px';
-            } else {
-                // 用户没开保活（或点击发送按钮）：正常模式，清空并失焦（让键盘收起）
-                DOMElements.messageInput.value = '';
-                DOMElements.messageInput.style.height = '46px';
-                DOMElements.messageInput.blur();
-            }
-            // 清理标记
-            delete DOMElements.messageInput.dataset.keepFocus;
-
-
-            if (imageFile && imageFile.size > MAX_IMAGE_SIZE) {
-                showNotification('图片大小不能超过5MB', 'error'); DOMElements.imageInput.value = ''; return;
-            }
-            if (imageBase64) {
-                createMessage(imageBase64);
-                DOMElements.imageInput.value = '';
-                return;
-            }
-
-
-            const createMessage = (imgSrc = null) => {
-                const messageData = {
-                    id: Date.now(),
-                    sender: 'user',
-                    text: text || '',
-                    timestamp: new Date(),
-                    image: imgSrc,
-                    status: 'sent',
-                    favorited: false,
-                    note: null,
-                    replyTo: currentReplyTo,
-                    type: type
-                };
-
-                if (type === 'system') messageData.sender = null;
-                addMessage(messageData);
-                if (type !== 'system') playSound('send');
-                currentReplyTo = null;
-                updateReplyPreview();
-                // 🌟 发送完毕后，把标记擦除，防止影响后续正常的失焦操作
-                delete DOMElements.messageInput.dataset.keepFocus;
-
-                if (type === 'normal') {
-                    window._replyAborted = false;
-                    const delayRange = settings.replyDelayMax - settings.replyDelayMin;
-                    const randomDelay = settings.replyDelayMin + Math.random() * delayRange;
-
-                          // 1. 【防抖核心】先清除之前的倒计时，并记住之前有没有在倒计时
-                    const hadPendingTimer = !!window._pendingReplyTimer;
-                    if (hadPendingTimer) {
-                        clearTimeout(window._pendingReplyTimer);
-                        window._pendingReplyTimer = null;
-                    }
-                    
-                    // 2. 核心逻辑分支
-                    if (hadPendingTimer) {
-                        // 【情况A】之前已经在计划回复了（可能正在输入中）
-                        // 此时绝对不允许“半途而废”，必须继续回复！
-                        // 直接把新发的这条也改成已读，然后重新开始倒计时
-                        _doMarkReadAndStartTyping();
-                    } else {
-                        // 【情况B】之前没有回复计划（消息处于安静未读状态）
-                        // 这是【唯一】允许投“不回复”骰子的时机！
-                        const shouldIgnore = settings.allowReadNoReply && (Math.random() < (settings.readNoReplyChance || 0.2));
-                        
-                        if (!shouldIgnore) {
-                        // 决定回复：改已读，开始输入
-                        _doMarkReadAndStartTyping();
-                        } else {
-                        // 决定不回复：什么都不干，安安静静保持未读
-                        // 确保没有幽灵的“正在输入”
-                        const tiWrapper = document.getElementById('typing-indicator-wrapper');
-                        if (tiWrapper) tiWrapper.style.display = 'none';
-                        }
-                    }
-                    
-                    // 抽离出来的“改已读并开始输入”的动作包
-                    function _doMarkReadAndStartTyping() {
-                        // 瞬间把所有未读改成已读
-                        let readChanged = false;
-                        messages.forEach(msg => {
-                        if (msg.sender === 'user' && msg.status !== 'read') {
-                            msg.status = 'read';
-                            readChanged = true;
-                        }
-                        });
-                        if (readChanged) {
-                        renderMessages(false);
-                        throttledSaveData();
-                       // if (typeof playSound === 'function') playSound('read');
-                        }
-                        
-                        // 显示“正在输入中”
-                        if (settings.typingIndicatorEnabled) {
-                        const tiWrapper = document.getElementById('typing-indicator-wrapper');
-                        const tiLabel = document.getElementById('typing-indicator-label');
-                        const tiAvatar = document.getElementById('typing-indicator-avatar');
-                        if (tiLabel) tiLabel.textContent = (settings.partnerName || '对方') + ' 正在输入';
-                        if (tiWrapper) {
-                            positionTypingIndicator();
-                            tiWrapper.style.display = 'block';
-                        }
-                        if (tiAvatar) {
-                            const partnerImg = DOMElements.partner.avatar.querySelector('img');
-                            tiAvatar.innerHTML = partnerImg ? `<img src="${partnerImg.src}">` : '<i class="fas fa-user"></i>';
-                        }
-                        if (DOMElements.chatContainer) DOMElements.chatContainer.scrollTop = DOMElements.chatContainer.scrollHeight;
-                        }
-                        
-                        // 重新设置倒计时
-                        window._pendingReplyTimer = setTimeout(() => {
-                        window._pendingReplyTimer = null;
-                        simulateReply(); 
-                        }, randomDelay);
-                    }
-                }
-            };
-            // 🔥 必须严格等于字符串 '1' 才抢焦点，彻底杜绝幽灵标记或类型错误
-            if (DOMElements.messageInput.dataset.keepFocus === '1') {
-                setTimeout(() => DOMElements.messageInput.focus(), 0);
-            }
-
-            if (imageFile) {
-                showNotification('正在优化图片...', 'info', 1500);
-                optimizeImage(imageFile).then(createMessage).catch(() => showNotification('图片处理失败', 'error'));
-            } else {
-                createMessage();
-            }
-            DOMElements.imageInput.value = '';
-        }*/
         function sendMessage(textOverride = null, type = 'normal', imageBase64 = null) {
             const text = textOverride || DOMElements.messageInput.value.trim();
             const imageFile = DOMElements.imageInput.files[0];
@@ -1906,11 +1792,11 @@ function manageAutoSendTimer() {
                         });
                     }
                     const replyPool = customReplies.filter(r => !disabledItems.has(r) && !disabledGroupItems.has(r));
-                    //const replyText = replyPool[Math.floor(Math.random() * replyPool.length)];
+                    const replyText = replyPool[Math.floor(Math.random() * replyPool.length)];
                    // 🌟 限时字卡：获取当前特殊文案
-                    const careMsgs = (typeof getActiveCareMessages === 'function') ? getActiveCareMessages() : [];
+                   /* const careMsgs = (typeof getActiveCareMessages === 'function') ? getActiveCareMessages() : [];
                     const finalPool = careMsgs.length > 0 ? [...replyPool, ...careMsgs] : replyPool;
-                    const replyText = finalPool[Math.floor(Math.random() * finalPool.length)];
+                    const replyText = finalPool[Math.floor(Math.random() * finalPool.length)];*/
 
 
                     // Bug fix 2: 30% chance partner sends a sticker image instead of (or after) text

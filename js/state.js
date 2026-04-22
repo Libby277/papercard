@@ -8,29 +8,22 @@
 // 核心数据请看 config.js，不要在这里重复定义！
 // ============================================================
 window.APP_DATA_REGISTRY = [
-    // --- 1. 核心数据 (由 config.js 提供，这里只做 Getter/Setter 桥接) ---
     { id: 'messages', name: '聊天记录', icon: 'fa-comments', core: true, backup: true, getValue: () => typeof messages !== 'undefined' ? messages : [], setValue: (v) => { if(typeof messages !== 'undefined') messages = v; }, onImport: (d) => { if(typeof messages !== 'undefined') messages = d.map(m => ({...m, timestamp: new Date(m.timestamp)})); } },
     { id: 'settings', name: '外观与设置', icon: 'fa-sliders-h', core: true, backup: true, getValue: () => typeof settings !== 'undefined' ? settings : {}, setValue: (v) => { if(typeof settings !== 'undefined') settings = v; }, onImport: (d) => { if(typeof settings !== 'undefined') Object.assign(settings, d); } },
-    
-    // --- 2. 功能数据 ---
     { id: 'anniversaries', name: '重要日', icon: 'fa-heart', backup: true, getValue: () => typeof anniversaries !== 'undefined' ? anniversaries : [], setValue: (v) => { if(typeof anniversaries !== 'undefined') anniversaries = v; } },
     { id: 'calendarEvents', name: '心情与日历', icon: 'fa-calendar-alt', backup: true, getValue: () => typeof calendarEvents !== 'undefined' ? calendarEvents : [], setValue: (v) => { if(typeof calendarEvents !== 'undefined') calendarEvents = v; } },
-    
-    // --- 3. 月经系统 ---
-    { id: 'periodCareMessages', name: '月经关怀文案', icon: 'fa-heart', backup: true, getValue: () => typeof periodCareMessages !== 'undefined' ? periodCareMessages : {}, setValue: (v) => { if(typeof periodCareMessages !== 'undefined') periodCareMessages = v; } },
+    //{ id: 'periodCareMessages', name: '月经关怀文案', icon: 'fa-heart', backup: true, getValue: () => typeof periodCareMessages !== 'undefined' ? periodCareMessages : {}, setValue: (v) => { if(typeof periodCareMessages !== 'undefined') periodCareMessages = v; } },
     { id: 'periodRecords', name: '月经周期记录', icon: 'fa-calendar-check', backup: true, getValue: () => typeof periodRecords !== 'undefined' ? periodRecords : [], setValue: (v) => { if(typeof periodRecords !== 'undefined') periodRecords = v; } },
     { id: 'periodSettings', name: '月经设置', icon: 'fa-cog', backup: true, getValue: () => typeof periodSettings !== 'undefined' ? periodSettings : {}, setValue: (v) => { if(typeof periodSettings !== 'undefined') periodSettings = v; } },
-
-    // --- 4. 新功能 ---
     { id: 'envelopeData', name: '留言板', icon: 'fa-solid fa-thumbtack', backup: true, getValue: () => typeof window.boardDataV2 !== 'undefined' ? window.boardDataV2 : {}, setValue: (v) => { if (typeof window.setBoardDataV2 === 'function') window.setBoardDataV2(v); } },
     { id: 'moodDiaryData', name: '心晴手账', icon: 'fa-cloud-sun', backup: true, getValue: () => typeof moodDiaryData !== 'undefined' ? moodDiaryData : [], setValue: (v) => { if(typeof moodDiaryData !== 'undefined') moodDiaryData = v; } },
     { id: 'divinationHistory', name: '占卜记录', icon: 'fa-moon', backup: true, getValue: () => typeof divinationHistory !== 'undefined' ? divinationHistory : [], setValue: (v) => { if(typeof divinationHistory !== 'undefined') divinationHistory = v; } },
-
-    // --- 5. 外观主题 ---
+    { id: 'wishingPoolData', name: '许愿池', icon: 'fa-star', backup: true, getValue: () => typeof wishingPoolData !== 'undefined' ? wishingPoolData : [], setValue: (v) => { if(typeof wishingPoolData !== 'undefined') wishingPoolData = v; } },
     { id: 'savedBackgrounds', name: '背景图集', icon: 'fa-image', backup: true, getValue: () => typeof savedBackgrounds !== 'undefined' ? savedBackgrounds : [], setValue: (v) => { if(typeof savedBackgrounds !== 'undefined') savedBackgrounds = v; } },
     { id: 'customThemes', name: '自定义主题', icon: 'fa-palette', backup: true, getValue: () => typeof customThemes !== 'undefined' ? customThemes : [], setValue: (v) => { if(typeof customThemes !== 'undefined') customThemes = v; } },
     { id: 'themeSchemes', name: '主题方案', icon: 'fa-swatchbook', backup: true, getValue: () => typeof themeSchemes !== 'undefined' ? themeSchemes : [], setValue: (v) => { if(typeof themeSchemes !== 'undefined') themeSchemes = v; } },
-    { id: 'wishingPoolData', name: '许愿池', icon: 'fa-star', backup: true, getValue: () => typeof wishingPoolData !== 'undefined' ? wishingPoolData : [], setValue: (v) => { if(typeof wishingPoolData !== 'undefined') wishingPoolData = v; } },
+    { id: 'callBgLibrary', name: '通话背景', icon: 'fa-video', backup: true, getValue: () => typeof callBgLibrary !== 'undefined' ? callBgLibrary : [], setValue: (v) => { if(typeof callBgLibrary !== 'undefined') callBgLibrary = v; } }
+
 ];
 
 // ============================================================
@@ -86,6 +79,7 @@ window.APP_DATA = {
         'envelopeData': () => typeof window.boardDataV2 !== 'undefined' ? window.boardDataV2 : { myThreads: [], partnerThreads: [], boardReplyPool: [], settings: {} },
         'moodDiaryData': () => typeof moodDiaryData !== 'undefined' ? moodDiaryData : [],
         'divinationHistory': () => typeof divinationHistory !== 'undefined' ? divinationHistory : [],
+        'callBgLibrary': () => typeof callBgLibrary !== 'undefined' ? callBgLibrary : [],
     },
     
     _setters: {
@@ -109,6 +103,8 @@ window.APP_DATA = {
         'envelopeData': (v) => { if (typeof window.setBoardDataV2 === 'function') window.setBoardDataV2(v); },
         'moodDiaryData': (v) => { if(typeof moodDiaryData !== 'undefined') moodDiaryData = v; },
         'divinationHistory': (v) => { if(typeof divinationHistory !== 'undefined') divinationHistory = v; },
+        'callBgLibrary': (v) => { if(typeof callBgLibrary !== 'undefined') callBgLibrary = v; },
+
     }
 };
 
@@ -137,6 +133,8 @@ window._setRegVal = (id, val) => {
         let calendarEvents = [];
         //let sessionList = [];
         let messages = [];
+        var callBgLibrary = [];
+        var activeCallBg = localStorage.getItem('activeCallBg') || null;
         let settings = {   
             homeShortcutsCustomEnabled: false,
             homeShortcutsSelected: ['advanced'],
@@ -172,7 +170,14 @@ window._setRegVal = (id, val) => {
         let currentAnniversaryType = 'anniversary';
         let customThemes = [];
         let themeSchemes = []; 
-        const DOMElements = {
+        let periodRecords = [];
+        let lastPeriodReminderCheck = null;
+        let periodSettings = {
+            averageCycleLength: 28,
+            lastCalculation: null,
+        };
+        let periodCareMessages = null;
+                const DOMElements = {
             html: document.documentElement,
             chatContainer: document.getElementById('chat-container'),
             messageInput: document.getElementById('message-input'),
@@ -328,18 +333,4 @@ window._setRegVal = (id, val) => {
             },
 
         };
-// 月经系统变量
-window.periodRecords = [];
-window.lastPeriodReminderCheck = null;
-window.periodSettings = {
-    averageCycleLength: 28,
-    lastCalculation: null,
-};
-
-// 月经关怀消息
-window.periodCareMessages = {
-    approaching: [],
-    during: [],
-    delayed: []
-};
 

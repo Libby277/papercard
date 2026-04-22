@@ -165,16 +165,6 @@ function initChatActionListeners() {
         } 
         throttledSaveData();
     });
-    // 新的发送逻辑
-   /* DOMElements.sendBtn.addEventListener('click', (e) => {
-        e.preventDefault(); // 🔥 关键！阻止浏览器默认的抢焦点行为
-        const text = DOMElements.messageInput.value.trim();
-        const imageFile = DOMElements.imageInput.files[0];
-        if (text || imageFile) {
-        DOMElements.messageInput.dataset.keepFocus = window._keepKeyboardAlive ? '1' : '0';
-            sendMessage(); // 直接调用，不需要判断了
-        }
-    });*/
       // 🛡️ 终极防线：使用 mousedown 抢跑！
     DOMElements.sendBtn.addEventListener('mousedown', (e) => {
         const text = DOMElements.messageInput.value.trim();
@@ -305,52 +295,7 @@ function initModalListeners() {
         DOMElements.editModal.save.disabled = !DOMElements.editModal.input.value.trim();
     });
 
-    /*DOMElements.pokeModal.save.addEventListener('click', () => {
-        let pokeText = DOMElements.pokeModal.input.value.trim();
-        
-        // 判断是不是从你自己的快捷面板点进来的
-        if (window._pokeModalTarget === 'myPanel') {
-            window._pokeModalTarget = null; // 用完销毁标记
-            
-            if (!pokeText) {
-                showNotification('动作内容不能为空', 'error');
-                return;
-            }
-            if (!settings.myPokeList) settings.myPokeList = [];
-            if (settings.myPokeList.includes(pokeText)) {
-                showNotification('这个动作已经存在了', 'warning');
-                return;
-            }
-            
-            // 存到你自己的独立列表里，不发送消息
-            settings.myPokeList.push(pokeText);
-            hideModal(DOMElements.pokeModal.modal);
-            DOMElements.pokeModal.input.value = '';
-            if (typeof throttledSaveData === 'function') throttledSaveData();
-            showNotification('动作已添加到列表', 'success');
-            
-            // 自动刷新一下拍一拍面板
-            const panel = document.getElementById('user-sticker-picker');
-            if (panel && panel.classList.contains('active')) {
-                const activeTab = panel.querySelector('.combo-tab-btn.active');
-                if (activeTab) activeTab.click(); 
-            }
-        } else {
-            // 走这里说明是从“回复库”或者其他地方进来的，保持原来的逻辑（直接发送）
-            pokeText = pokeText || `${settings.myName} 拍了拍 ${settings.partnerName}`;
-            addMessage({
-                id: Date.now(),
-                text: typeof _formatPokeText === 'function' ? _formatPokeText(pokeText) : pokeText,
-                timestamp: new Date(),
-                type: 'system'
-            });
-            hideModal(DOMElements.pokeModal.modal);
-            DOMElements.pokeModal.input.value = '';
-            const delayRange = settings.replyDelayMax - settings.replyDelayMin;
-            const randomDelay = settings.replyDelayMin + Math.random() * delayRange;
-            setTimeout(simulateReply, randomDelay);
-        }
-    });*/
+    
 
 
     DOMElements.cancelCoinResult.addEventListener('click', () => {
@@ -678,7 +623,7 @@ function initModalListeners() {
             const replyLibraryBtn = document.getElementById('reply-library-btn');
             if (replyLibraryBtn) {
                 replyLibraryBtn.addEventListener('click', () => {
-                    renderReplyLibrary()
+                    renderReplyLibrary();
                     showModal(document.getElementById('custom-replies-modal'));
                 });
             }

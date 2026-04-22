@@ -293,21 +293,6 @@ function initThemeEditor() {
     const fontApplyBtn = document.getElementById('apply-font-btn'); // 请核对实际ID
     const fontUrlInput = document.getElementById('font-url-input'); // 请核对实际ID
 
-    /*if (fontApplyBtn && fontUrlInput) {
-        fontApplyBtn.addEventListener('click', () => {
-        const url = fontUrlInput.value.trim();
-        settings.customFontUrl = url;
-        showNotification('正在尝试加载字体...', 'info', 1000);
-        applyCustomFont(url).then(() => {
-            throttledSaveData();
-            if(url) showNotification('字体已应用', 'success');
-            else showNotification('已恢复默认字体', 'success');
-        }).catch(err => {
-            console.error('字体加载失败:', err);
-            showNotification('字体加载失败，请检查链接或网络', 'error');
-        });
-        });
-    }*/
     if (fontApplyBtn && fontUrlInput) {
         fontApplyBtn.addEventListener('click', () => {
             const url = fontUrlInput.value.trim();

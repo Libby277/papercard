@@ -695,7 +695,7 @@ function generateTxtFile(msgs) {
 }
 
  
-async function generateScreenshot(msgs) {
+/*async function generateScreenshot(msgs) {
     showNotification('正在生成截图...', 'info');
 
     // 1. 强制等待字体加载完成
@@ -721,17 +721,7 @@ async function generateScreenshot(msgs) {
         const bubbleStyle = settings.bubbleStyle || 'standard';
         const showAvatar = localStorage.getItem('screenshot-show-avatar') === 'true';
 
-        // 【修复位置】定义头像圆角
-        /*let avatarRadius = '20%'; 
-        try {
-            const radiusVar = computedStyle.getPropertyValue('--avatar-corner-radius').trim();
-            if (radiusVar && radiusVar !== '0px' && radiusVar !== '50%') {
-                avatarRadius = radiusVar;
-            } else if (radiusVar === '0px') {
-                avatarRadius = '4px';
-            }
-        } catch (e) {}*/
-               // 【修复位置】定义头像圆角：直接根据设置里的形状来判断
+        // 【修复位置】定义头像圆角：直接根据设置里的形状来判断
       let avatarRadius = '50%'; // 默认圆形
       const currentShape = settings.myAvatarShape || settings.partnerAvatarShape || 'circle';
       if (currentShape === 'square') {
@@ -746,37 +736,38 @@ async function generateScreenshot(msgs) {
         avatarRadius = '50%'; // 圆形就直接给正圆
       }
 
-
-        // 背景设置
-        /*let bgStyle = `background-color: ${primaryBg};`;
-        const bgImageVar = computedStyle.getPropertyValue('--chat-bg-image').trim();
-        if (bgImageVar && bgImageVar !== 'none') {
-            bgStyle = `background-image: ${bgImageVar}; background-size: 100% auto; background-position: top center; background-repeat: repeat-y;`;
-        } else if (settings.backgroundUrl) {
-            bgStyle = `background-image: url('${settings.backgroundUrl}'); background-size: 100% auto; background-position: top center; background-repeat: repeat-y;`;
-        }*/
-
-        // 背景设置 (适配 #real-bg-layer 新逻辑)
-        let bgStyle = `background-color: ${primaryBg};`;
-        try {
-        const bgLayer = document.getElementById('real-bg-layer');
-        if (bgLayer) {
-            const bgImg = bgLayer.querySelector('img');
-            if (bgImg && bgImg.src) {
-            const bgSrc = bgImg.src;
-            // 关键：必须包含 blob: 判断，否则 localforage 存的图会被跳过
-            const isSafeImg = bgSrc.startsWith('data:') || bgSrc.startsWith(window.location.origin) || bgSrc.startsWith('blob:');
-            if (isSafeImg) {
-                const isCoverMode = bgLayer.classList.contains('mode-cover');
-                bgStyle = `background-color: ${primaryBg}; background-image: url('${bgSrc}'); background-size: ${isCoverMode ? 'cover' : 'contain'}; background-position: center center; background-repeat: no-repeat;`;
-            }
-            }
-        }
-        } catch (e) {
-        console.warn('截图获取背景失败:', e);
+      // 背景设置：彻底无视主题背景，强制平铺指定图片
+      let bgStyle = `background-color: #ffffff;`; // 默认白底防透明
+      
+      try {
+        // 获取你选择用来做背景的图片（优先读取设置里的背景图）
+        let bgSrc = '';
+        
+        // 1. 尝试从设置里拿
+        if (settings.backgroundUrl) {
+           bgSrc = settings.backgroundUrl;
+        } else {
+           // 2. 尝试从页面的真实背景层拿
+           const bgLayer = document.getElementById('real-bg-layer');
+           if (bgLayer) {
+             const bgImg = bgLayer.querySelector('img');
+             if (bgImg && bgImg.src) bgSrc = bgImg.src;
+           }
         }
 
-
+        // 只要拿到了安全的本地图片，就强行铺满
+        if (bgSrc && (bgSrc.startsWith('data:') || bgSrc.startsWith(window.location.origin) || bgSrc.startsWith('blob:'))) {
+          bgStyle = `
+            background-image: url('${bgSrc}'); 
+            background-size: 100% auto; 
+            background-position: top center; 
+            background-repeat: repeat-y; 
+            background-color: #ffffff;
+          `;
+        }
+      } catch (e) {
+        console.warn('截图获取平铺背景失败:', e);
+      }
 
         // 头像URL获取
         let myAvatarUrl = '';
@@ -816,22 +807,6 @@ async function generateScreenshot(msgs) {
             const safeText = (msg.text || '').replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, '<br>');
 
             // 2. 处理表情包/图片 (支持 msg.image 或 msg.sticker 等字段)
-           /* let imageHtml = '';
-            // 兼容各种可能存储图片的字段名
-            const imgUrl = msg.image || msg.sticker || msg.img || msg.fileUrl || '';
-
-            if (imgUrl) {
-                // 安全处理 URL，防止 XSS
-                const safeUrl = imgUrl.replace(/"/g, '&quot;');
-                
-                // 根据消息类型判断样式：如果只有图片没有文字，就大图展示；如果有文字，就作为小图展示
-                const isOnlyImage = !safeText;
-                const imgStyle = isOnlyImage 
-                    ? 'max-width:100%; border-radius:12px; display:block;' 
-                    : 'max-width:180px; max-height:180px; border-radius:8px; display:block; margin-top:6px;';
-                
-                imageHtml = `<img src="${safeUrl}" style="${imgStyle}" onerror="this.style.display='none'">`;
-            }*/
             let imageHtml = '';
 			// 兼容各种可能存储图片的字段名
 			const imgUrl = msg.image || msg.sticker || msg.img || msg.fileUrl || '';
@@ -924,35 +899,6 @@ async function generateScreenshot(msgs) {
                     avatarHTML = `<div style="width:${avatarSize}px; height:${avatarSize}px; border-radius:${avatarRadius}; background:${isUser ? accentColor : '#e0e0e0'}; display:flex; align-items:center; justify-content:center; color:${isUser ? '#fff' : '#999'}; font-size:14px; flex-shrink:0; border: 2px solid rgba(255,255,255,0.3);">${isUser ? '我' : 'T'}</div>`;
                 }
             }
-
-             // 拼接消息块
-           /* if (showAvatar) {
-                chatParts.push(`
-                <div style="margin:16px 0; display:flex; align-items:flex-start; gap:12px; flex-direction:${isUser ? 'row-reverse' : 'row'};">
-                    ${avatarHTML}
-                    <div style="display:flex; flex-direction:column; max-width:calc(80% - ${avatarSize + 12}px); align-items:${isUser ? 'flex-end' : 'flex-start'};">
-                    <div style="display:inline-block; padding:10px 15px; border-radius:18px; background:${isUser ? accentColor : secondaryBg}; max-width:calc(80% -${avatarSize + 12}px); color:${isUser ? '#fff' : textPrimary}; text-align:left; font-size:15px; word-break:break-word;${bubbleStyleCSS} box-shadow: 0 3px 6px rgba(0,0,0,0.1);">
-                        ${replyContent}
-                        ${safeText}
-                        ${imageHtml}
-                    </div>
-                    ${timeStrHTML}
-                    </div>
-                </div>
-            `);
-
-            } else {
-                chatParts.push(`
-                    <div style="margin:16px 0; display:flex; flex-direction:column; align-items:${isUser ? 'flex-end' : 'flex-start'};">
-                       <div style="display:inline-block; padding:10px 15px; border-radius:18px; background:${isUser ? accentColor : secondaryBg}; max-width:80%; color:${isUser ? '#fff' : textPrimary}; text-align:left; font-size:15px; word-break:break-word; ${bubbleStyleCSS} box-shadow: 0 3px 6px rgba(0,0,0,0.1);">
-                            ${replyContent}
-                            ${safeText}
-                            ${imageHtml}
-                        </div>
-                        ${timeStrHTML}
-                    </div>
-                `);
-            }*/
            		// 拼接消息块
             if (showAvatar) {
                 chatParts.push(`
@@ -1019,13 +965,6 @@ async function generateScreenshot(msgs) {
             logging: false,
             windowWidth: phoneWidth,
             allowTaint: true,
-            /*ignoreElements: (element) => {
-            // ✨ 如果漏网了外部图片标签，直接让 html2canvas 无视它
-                if (element.tagName === 'IMG' && element.src && !element.src.startsWith('data:') && !element.src.startsWith(window.location.origin)) {
-                    return true;
-                }
-                return false;
-            },*/
             ignoreElements: (element) => {
                 if (element.tagName === 'IMG' && element.src) {
                     const src = element.src;
@@ -1055,14 +994,6 @@ async function generateScreenshot(msgs) {
                         clonedDoc.head.appendChild(bubbleStyle);
                     }
                 }
-
-                // 3. 复制主文档的外部样式表
-                /*document.head.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
-                    const newLink = clonedDoc.createElement('link');
-                    newLink.rel = 'stylesheet';
-                    newLink.href = link.href;
-                    clonedDoc.head.appendChild(newLink);
-                });*/
             }
 
         });
@@ -1080,8 +1011,288 @@ async function generateScreenshot(msgs) {
             document.body.removeChild(tempContainer);
         }
     }
+}*/
+
+async function generateScreenshot(msgs) {
+    showNotification('正在生成截图，消息较多会自动分张...', 'info');
+
+    // 1. 强制等待字体加载完成
+    if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // 🌟 核心防御：如果消息超过 60 条，强制分片，防止 html2canvas 内存爆炸
+    const MAX_SLICE = 80; 
+    const sortedMsgs = [...msgs].sort((a, b) => a.timestamp - b.timestamp);
+    let slices = [];
+    
+    if (sortedMsgs.length > MAX_SLICE) {
+        for (let i = 0; i < sortedMsgs.length; i += MAX_SLICE) {
+            slices.push(sortedMsgs.slice(i, i + MAX_SLICE));
+        }
+    } else {
+        slices.push(sortedMsgs);
+    }
+
+    const allResults = []; // 存放所有分片的数据 { url, count, width, height }
+
+    // 2. 循环渲染每一片
+    for (let s = 0; s < slices.length; s++) {
+        const currentSliceMsgs = slices[s];
+        const isLastSlice = (s === slices.length - 1);
+        const sliceIndex = s + 1;
+        
+        try {
+            const root = document.documentElement;
+            const computedStyle = getComputedStyle(root);
+            const fontFamily = computedStyle.getPropertyValue('--message-font-family').trim() || "'Noto Serif SC', serif";
+            const accentColor = computedStyle.getPropertyValue('--accent-color').trim() || '#c5a47e';
+            const secondaryBg = computedStyle.getPropertyValue('--secondary-bg').trim() || '#f0f0f0';
+            const primaryBg = computedStyle.getPropertyValue('--primary-bg').trim() || '#ffffff';
+            const textPrimary = computedStyle.getPropertyValue('--text-primary').trim() || '#1a1a1a';
+            const textSecondary = computedStyle.getPropertyValue('--text-secondary').trim() || '#7a7a7a';
+            const messageFontWeight = computedStyle.getPropertyValue('--message-font-weight').trim() || '400';
+            const messageLineHeight = computedStyle.getPropertyValue('--message-line-height').trim() || '1.5';
+            const bubbleStyle = settings.bubbleStyle || 'standard';
+            const showAvatar = localStorage.getItem('screenshot-show-avatar') === 'true';
+
+            let avatarRadius = '50%';
+            const currentShape = settings.myAvatarShape || settings.partnerAvatarShape || 'circle';
+            if (currentShape === 'square') {
+                try { const r = computedStyle.getPropertyValue('--avatar-corner-radius').trim(); avatarRadius = (r && r !== '') ? r : '8px'; } catch(e) { avatarRadius = '8px'; }
+            }
+
+            // 背景设置：彻底无视主题背景，强制平铺指定图片
+            let bgStyle = `background-color: #ffffff;`;
+            try {
+                let bgSrc = '';
+                if (settings.backgroundUrl) bgSrc = settings.backgroundUrl;
+                else {
+                    const bgLayer = document.getElementById('real-bg-layer');
+                    if (bgLayer) { const bgImg = bgLayer.querySelector('img'); if (bgImg && bgImg.src) bgSrc = bgImg.src; }
+                }
+                if (bgSrc && (bgSrc.startsWith('data:') || bgSrc.startsWith(window.location.origin) || bgSrc.startsWith('blob:'))) {
+                    bgStyle = `background-image: url('${bgSrc}'); background-size: 100% auto; background-position: top center; background-repeat: repeat-y; background-color: #ffffff;`;
+                }
+            } catch (e) { console.warn('获取背景失败:', e); }
+
+            let myAvatarUrl = '', partnerAvatarUrl = '';
+            if (showAvatar) {
+                const myAvatarImg = document.querySelector('.user-info:last-child .avatar img');
+                const partnerAvatarImg = document.querySelector('.user-info:first-child .avatar img');
+                if (myAvatarImg) myAvatarUrl = myAvatarImg.src;
+                if (partnerAvatarImg) partnerAvatarUrl = partnerAvatarImg.src;
+            }
+
+            const firstDate = new Date(currentSliceMsgs[0].timestamp).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', year: 'numeric' });
+            let dateTitle = firstDate;
+            if (!isLastSlice) {
+                dateTitle += ` (第 ${sliceIndex} / ${slices.length} 张)`;
+            } else if (slices.length > 1) {
+                dateTitle += ` (第 ${sliceIndex} / ${slices.length} 张)`;
+            }
+
+            const chatParts = [];
+            chatParts.push(`
+                <div style="font-family:sans-serif; max-width: 100%; margin: auto; position: relative; z-index: 1; background: transparent;">
+                <div style="text-align:center; margin-bottom:20px; padding:10px 0; font-size:18px; font-weight:600; color: #333; border-bottom: 1px solid #ddd; letter-spacing: 1px;">
+                    聊天记录 · 本张 ${currentSliceMsgs.length} 条 ${slices.length > 1 ? '(共'+slices.length+'张)' : ''}
+                </div>
+                <div style="background: transparent; padding: 0;">
+            `);
+
+            currentSliceMsgs.forEach((msg, index) => {
+                const isUser = msg.sender === 'user';
+                const safeText = (msg.text || '').replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, '<br>');
+                let imageHtml = '';
+                const imgUrl = msg.image || msg.sticker || msg.img || msg.fileUrl || '';
+                if (imgUrl) {
+                    const isSafeImg = imgUrl.startsWith('data:') || imgUrl.startsWith(window.location.origin);
+                    if (isSafeImg) { imageHtml = `<img src="${imgUrl.replace(/"/g, '&quot;')}" style="max-width:150px; max-height:150px; border-radius:12px; display:block; object-fit:contain;" onerror="this.style.display='none'">`; }
+                    else { imageHtml = `<div style="font-size:12px;color:#999;padding:5px 0;">[图片]</div>`; }
+                }
+
+                let timeStrHTML = '';
+                const fmt = settings.timeFormat || 'HH:mm';
+                if (fmt !== 'off') {
+                    const nextMsg = currentSliceMsgs[index + 1];
+                    const isLastInGroup = !nextMsg || nextMsg.sender !== msg.sender;
+                    if (isLastInGroup) {
+                        const ts = new Date(msg.timestamp);
+                        let timeStr;
+                        if (fmt === 'HH:mm:ss') timeStr = ts.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+                        else if (fmt === 'h:mm AM/PM') timeStr = ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                        else if (fmt === 'h:mm:ss AM/PM') timeStr = ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+                        else timeStr = ts.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+                        timeStrHTML = `<div style="font-size:11px;color:${isUser ? 'rgba(255,255,255,0.7)' : textSecondary};margin-top:5px;text-align:${isUser ? 'right' : 'left'};font-weight:500;opacity:0.7;">${timeStr}</div>`;
+                    }
+                }
+
+                let replyContent = '';
+                if (msg.replyTo) {
+                    const replySender = msg.replyTo.sender === 'user' ? (settings.myName || '我') : (settings.partnerName || '对方');
+                    let replyText = msg.replyTo.text ? msg.replyTo.text.slice(0, 40) : '[图片]';
+                    if (msg.replyTo.text && msg.replyTo.text.length > 40) replyText += '...';
+                    if (isUser) replyContent = `<div style="display:flex;flex-direction:column;border-left:3px solid rgba(255,255,255,0.7);padding:5px 10px 5px 9px;margin-bottom:7px;background-color:rgba(255,255,255,0.18);border-radius:0 8px 8px 0;overflow:hidden;"><div style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.9);margin-bottom:2px;">${replySender}</div><div style="font-size:12px;color:rgba(255,255,255,0.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic;max-width:200px;">${replyText}</div></div>`;
+                    else replyContent = `<div style="display:flex;flex-direction:column;border-left:3px solid ${accentColor};padding:5px 10px 5px 9px;margin-bottom:7px;background-color:rgba(0,0,0,0.03);border-radius:0 8px 8px 0;overflow:hidden;"><div style="font-size:11px;font-weight:600;color:${accentColor};margin-bottom:2px;">${replySender}</div><div style="font-size:12px;color:${textSecondary};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic;max-width:200px;">${replyText}</div></div>`;
+                }
+
+                let bubbleStyleCSS = '';
+                if (bubbleStyle === 'rounded') bubbleStyleCSS = 'border-radius: 20px;';
+                else if (bubbleStyle === 'rounded-large') bubbleStyleCSS = 'border-radius: 24px;';
+                else if (bubbleStyle === 'square') bubbleStyleCSS = 'border-radius: 8px;';
+
+                const isOnlyImageMsg = !safeText && !replyContent;
+                let bubbleInnerStyle = '';
+                if (isOnlyImageMsg) bubbleInnerStyle = 'display:inline-block; padding:0; border-radius:12px; background:transparent; max-width:100%; text-align:left;';
+                else bubbleInnerStyle = `display:inline-block; padding:10px 15px; border-radius:18px; background:${isUser ? accentColor : secondaryBg}; max-width:100%; color:${isUser ? '#fff' : textPrimary}; text-align:left; font-size:15px; word-break:break-word; ${bubbleStyleCSS} box-shadow: 0 3px 6px rgba(0,0,0,0.1);`;
+
+                const avatarSize = 35;
+                const avatarUrl = isUser ? myAvatarUrl : partnerAvatarUrl;
+                const isSafeAvatar = avatarUrl && (avatarUrl.startsWith('data:') || avatarUrl.startsWith(window.location.origin));
+                let avatarHTML = '';
+                if (showAvatar) {
+                    if (isSafeAvatar) avatarHTML = `<img src="${avatarUrl}" style="width:${avatarSize}px; height:${avatarSize}px; border-radius:${avatarRadius}; object-fit:cover; flex-shrink:0; border: 2px solid rgba(255,255,255,0.3);">`;
+                    else avatarHTML = `<div style="width:${avatarSize}px; height:${avatarSize}px; border-radius:${avatarRadius}; background:${isUser ? accentColor : '#e0e0e0'}; display:flex; align-items:center; justify-content:center; color:${isUser ? '#fff' : '#999'}; font-size:14px; flex-shrink:0; border: 2px solid rgba(255,255,255,0.3);">${isUser ? '我' : 'T'}</div>`;
+                }
+
+                if (showAvatar) {
+                    chatParts.push(`<div style="margin:16px 0; display:flex; align-items:flex-start; gap:12px; flex-direction:${isUser ? 'row-reverse' : 'row'};">${avatarHTML}<div style="display:flex; flex-direction:column; max-width:calc(80% - ${avatarSize + 12}px); align-items:${isUser ? 'flex-end' : 'flex-start'};"><div style="${bubbleInnerStyle}">${replyContent}${safeText}${imageHtml}</div>${timeStrHTML}</div></div>`);
+                } else {
+                    chatParts.push(`<div style="margin:16px 0; display:flex; flex-direction:column; align-items:${isUser ? 'flex-end' : 'flex-start'};"><div style="${bubbleInnerStyle}">${replyContent}${safeText}${imageHtml}</div>${timeStrHTML}</div>`);
+                }
+            });
+
+            chatParts.push(`</div><div style="text-align:center; margin-top:20px; padding:10px; font-size:12px; color: #888; border-top: 1px solid #eee; border-radius: 0 0 12px 12px;">${dateTitle}</div></div>`);
+
+            let tempContainer = document.createElement('div');
+            const phoneWidth = 375;
+            tempContainer.style.cssText = `position:fixed; left:-9999px; top:0; width:${phoneWidth}px; ${bgStyle} color:${textPrimary}; font-family: ${fontFamily}; font-weight: ${messageFontWeight}; line-height: ${messageLineHeight}; padding: 30px 20px; border-radius: 10px; overflow: hidden;`;
+            tempContainer.innerHTML = chatParts.join('');
+            document.body.appendChild(tempContainer);
+            
+            const useScale = 3; 
+
+            const canvas = await html2canvas(tempContainer, {
+                backgroundColor: null,
+                scale: useScale,
+                useCORS: false,
+                logging: false,
+                windowWidth: phoneWidth,
+                allowTaint: true,
+                ignoreElements: (element) => {
+                    if (element.tagName === 'IMG' && element.src) {
+                        const src = element.src;
+                        const isSafe = src.startsWith('data:') || src.startsWith(window.location.origin) || src.startsWith('blob:');
+                        if (!isSafe) return true;
+                    }
+                    return false;
+                },
+                onclone: (clonedDoc) => {
+                    const clonedContainer = clonedDoc.body.querySelector('div[style*="width: 375px"]');
+                    const fontStyle = clonedDoc.createElement('style');
+                    fontStyle.textContent = `* { font-family: ${fontFamily} !important; }`;
+                    if (clonedContainer) clonedContainer.insertBefore(fontStyle, clonedContainer.firstChild);
+                    const userBubbleCSS = document.getElementById('user-custom-bubble-style');
+                    if (userBubbleCSS && userBubbleCSS.textContent) {
+                        const bubbleStyleEl = clonedDoc.createElement('style');
+                        bubbleStyleEl.textContent = userBubbleCSS.textContent;
+                        if (clonedContainer) clonedContainer.insertBefore(bubbleStyleEl, clonedContainer.firstChild);
+                    }
+                }
+            });
+
+            if (tempContainer && tempContainer.parentNode) document.body.removeChild(tempContainer);
+
+            const url = canvas.toDataURL('image/png');
+            allResults.push({ url, count: currentSliceMsgs.length, width: canvas.width, height: canvas.height, index: sliceIndex });
+
+        } catch (error) {
+            console.error(`第 ${sliceIndex} 张截图生成失败:`, error);
+            showNotification(`第 ${sliceIndex} 张截图生成失败，已跳过`, 'error');
+        }
+    }
+
+    // 3. 渲染最终的预览/下载弹窗
+    if (allResults.length === 0) {
+        showNotification('所有截图均生成失败', 'error');
+        return;
+    }
+
+    // 如果只有一张，走原来的单张预览逻辑
+    if (allResults.length === 1) {
+        showScreenshotPreview(allResults[0].url, allResults[0].count, allResults[0].width, allResults[0].height);
+    } else {
+        // 如果是多张，显示打包下载界面
+        showBatchScreenshotPreview(allResults);
+    }
 }
 
+/**
+ * 🌟 新增：多张截图批量下载预览界面
+ */
+function showBatchScreenshotPreview(results) {
+    const previewModal = document.createElement('div');
+    previewModal.className = 'modal';
+    previewModal.id = 'screenshot-preview-modal';
+    
+    let imgsHtml = results.map(r => `
+        <div style="border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: #fff;">
+            <img src="${r.url}" style="width: 100%; display: block;" alt="第${r.index}张截图">
+            <div style="padding: 8px; font-size: 12px; color: var(--text-secondary); text-align: center;">
+                第 ${r.index} 张 · ${r.count}条消息
+            </div>
+        </div>
+    `).join('');
+
+    previewModal.innerHTML = `
+        <div class="modal-content" style="max-height: 85vh; display:flex; flex-direction:column;">
+            <div class="modal-title">
+                <i class="fas fa-images"></i>
+                <span>截图已自动分为 ${results.length} 张</span>
+            </div>
+            <div style="flex: 1; overflow-y: auto; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px;">
+                ${imgsHtml}
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary); text-align: center; margin-bottom: 12px;">
+                点击下方按钮，将 ${results.length} 张图片打包下载
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-secondary" id="close-screenshot-preview">
+                    <i class="fas fa-times"></i> 关闭
+                </button>
+                <button class="modal-btn modal-btn-primary" id="download-all-screenshots">
+                    <i class="fas fa-download"></i> 一键打包下载
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(previewModal);
+    if (typeof showModal === 'function') showModal(previewModal); else previewModal.style.display = 'flex';
+
+    // 一键下载逻辑
+    previewModal.querySelector('#download-all-screenshots').addEventListener('click', () => {
+        results.forEach((r, i) => {
+            setTimeout(() => {
+                const a = document.createElement('a');
+                a.href = r.url;
+                const dateStr = new Date().toISOString().slice(0, 10);
+                a.download = `聊天记录_第${r.index}张_${dateStr}.png`;
+                a.click();
+            }, i * 500); // 间隔 0.5 秒下载一张，防止浏览器拦截
+        });
+        showNotification(`正在下载 ${results.length} 张截图，请稍候...`, 'success', 3000);
+    });
+
+    const closeHandler = () => {
+        if (typeof hideModal === 'function') { hideModal(previewModal); setTimeout(() => previewModal.remove(), 300); }
+        else { previewModal.style.display = 'none'; previewModal.remove(); }
+    };
+    previewModal.querySelector('#close-screenshot-preview').addEventListener('click', closeHandler);
+    previewModal.addEventListener('click', (e) => { if (e.target === previewModal) closeHandler(); });
+}
 
 
 /**

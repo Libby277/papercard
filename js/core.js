@@ -1017,14 +1017,6 @@ function manageAutoSendTimer() {
         const updateAvatar = (element, src) => {
             if (src) element.innerHTML = `<img src="${src}" alt="avatar">`; else element.innerHTML = `<i class="fas fa-user"></i>`;
         };
-
-        /*const removeBackground = () => {
-            document.documentElement.style.removeProperty('--chat-bg-image');
-            document.body.classList.remove('with-background');
-            localforage.removeItem(getStorageKey('chatBackground'));
-            safeRemoveItem(getStorageKey('chatBackground'));
-            showNotification('背景图片已移除', 'success');
-        };*/
         const removeBackground = () => {
             const layer = document.getElementById('real-bg-layer');
             if (layer) {

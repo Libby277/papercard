@@ -16,8 +16,9 @@ window.APP_DATA_REGISTRY = [
     { id: 'periodRecords', name: '月经周期记录', icon: 'fa-calendar-check', backup: true, getValue: () => typeof periodRecords !== 'undefined' ? periodRecords : [], setValue: (v) => { if(typeof periodRecords !== 'undefined') periodRecords = v; } },
     { id: 'periodSettings', name: '月经设置', icon: 'fa-cog', backup: true, getValue: () => typeof periodSettings !== 'undefined' ? periodSettings : {}, setValue: (v) => { if(typeof periodSettings !== 'undefined') periodSettings = v; } },
     { id: 'envelopeData', name: '留言板', icon: 'fa-solid fa-thumbtack', backup: true, getValue: () => typeof window.boardDataV2 !== 'undefined' ? window.boardDataV2 : {}, setValue: (v) => { if (typeof window.setBoardDataV2 === 'function') window.setBoardDataV2(v); } },
-    { id: 'moodDiaryData', name: '心晴手账', icon: 'fa-cloud-sun', backup: true, getValue: () => typeof moodDiaryData !== 'undefined' ? moodDiaryData : [], setValue: (v) => { if(typeof moodDiaryData !== 'undefined') moodDiaryData = v; } },
-    { id: 'divinationHistory', name: '占卜记录', icon: 'fa-moon', backup: true, getValue: () => typeof divinationHistory !== 'undefined' ? divinationHistory : [], setValue: (v) => { if(typeof divinationHistory !== 'undefined') divinationHistory = v; } },
+   // { id: 'moodDiaryData', name: '心晴手账', icon: 'fa-cloud-sun', backup: true, getValue: () => typeof moodDiaryData !== 'undefined' ? moodDiaryData : [], setValue: (v) => { if(typeof moodDiaryData !== 'undefined') moodDiaryData = v; } },
+    {id: 'moodData',name: '心情记录',icon: 'fa-cloud-sun',backup: true, getValue: () => typeof window.moodData !== 'undefined' ? window.moodData : {},setValue: (v) => { if(typeof window.moodData !== 'undefined') window.moodData = v; }},
+    {id: 'divinationHistory', name: '占卜记录', icon: 'fa-moon', backup: true, getValue: () => typeof divinationHistory !== 'undefined' ? divinationHistory : [], setValue: (v) => { if(typeof divinationHistory !== 'undefined') divinationHistory = v; } },
     { id: 'wishingPoolData', name: '许愿池', icon: 'fa-star', backup: true, getValue: () => typeof wishingPoolData !== 'undefined' ? wishingPoolData : [], setValue: (v) => { if(typeof wishingPoolData !== 'undefined') wishingPoolData = v; } },
     { id: 'savedBackgrounds', name: '背景图集', icon: 'fa-image', backup: true, getValue: () => typeof savedBackgrounds !== 'undefined' ? savedBackgrounds : [], setValue: (v) => { if(typeof savedBackgrounds !== 'undefined') savedBackgrounds = v; } },
     { id: 'customThemes', name: '自定义主题', icon: 'fa-palette', backup: true, getValue: () => typeof customThemes !== 'undefined' ? customThemes : [], setValue: (v) => { if(typeof customThemes !== 'undefined') customThemes = v; } },
@@ -77,9 +78,10 @@ window.APP_DATA = {
         'themeSchemes': () => typeof themeSchemes !== 'undefined' ? themeSchemes : [],
         // 新功能：请根据你的实际变量名添加
         'envelopeData': () => typeof window.boardDataV2 !== 'undefined' ? window.boardDataV2 : { myThreads: [], partnerThreads: [], boardReplyPool: [], settings: {} },
-        'moodDiaryData': () => typeof moodDiaryData !== 'undefined' ? moodDiaryData : [],
+       // 'moodDiaryData': () => typeof moodDiaryData !== 'undefined' ? moodDiaryData : [],
         'divinationHistory': () => typeof divinationHistory !== 'undefined' ? divinationHistory : [],
         'callBgLibrary': () => typeof callBgLibrary !== 'undefined' ? callBgLibrary : [],
+        'moodData': () => typeof window.moodData !== 'undefined' ? window.moodData : {},
     },
     
     _setters: {
@@ -101,10 +103,10 @@ window.APP_DATA = {
         'customThemes': (v) => { if(typeof customThemes !== 'undefined') customThemes = v; },
         'themeSchemes': (v) => { if(typeof themeSchemes !== 'undefined') themeSchemes = v; },
         'envelopeData': (v) => { if (typeof window.setBoardDataV2 === 'function') window.setBoardDataV2(v); },
-        'moodDiaryData': (v) => { if(typeof moodDiaryData !== 'undefined') moodDiaryData = v; },
+        //'moodDiaryData': (v) => { if(typeof moodDiaryData !== 'undefined') moodDiaryData = v; },
         'divinationHistory': (v) => { if(typeof divinationHistory !== 'undefined') divinationHistory = v; },
         'callBgLibrary': (v) => { if(typeof callBgLibrary !== 'undefined') callBgLibrary = v; },
-
+        'moodData': (v) => { if(typeof window.moodData !== 'undefined') window.moodData = v; },
     }
 };
 
